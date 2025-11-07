@@ -13,6 +13,7 @@
     },
 
     "plugins": [],
+    "scheme": "my-expo-app",
 
     "orientation": "portrait",
     "icon": "./assets/icon.png",
