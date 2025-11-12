@@ -14,7 +14,7 @@ const ITEM_HEIGHT = 80;
 export default function LoginGender() {
   const router = useRouter();
   const { userInfo, setGender } = useUserStore();
-  const selectedGender = userInfo.gender || '女';
+  const selectedGender = userInfo.gender || '男';
   const scrollViewRef = useRef<ScrollView>(null);
 
   const genders: readonly GenderType[] = ['男', '女', '其他'];

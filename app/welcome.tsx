@@ -11,10 +11,13 @@ export default function Welcome() {
       style={styles.container}
     >
       <Text style={styles.title}>欢迎使用 NEST</Text>
-      <TouchableOpacity style={styles.button} onPress={() => router.replace('/login')}>
+      <TouchableOpacity style={styles.button} onPress={() => router.push('/settings')}>
+        <Text style={styles.buttonText}>主页</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.button} onPress={() => router.push('/login')}>
         <Text style={styles.buttonText}>去登录</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.button} onPress={() => router.replace('/plan')}>
+      <TouchableOpacity style={styles.button} onPress={() => router.push('/plan')}>
         <Text style={styles.buttonText}>跳过，直接进入</Text>
       </TouchableOpacity>
     </ImageBackground>

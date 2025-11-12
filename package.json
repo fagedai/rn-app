@@ -11,6 +11,7 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.0.3",
     "@react-navigation/native": "^7.1.8",
     "@tybys/wasm-util": "^0.10.1",
     "expo": "^54.0.0",
