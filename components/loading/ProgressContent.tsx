@@ -1,33 +1,36 @@
 import React from 'react';
-import { View, Text, Dimensions } from 'react-native';
-import ProgressCircle from './ProgressCircle';
-import AnimatedSphere from './AnimatedSphere';
-import ProgressPercentage from './ProgressPercentage';
-import Animated from 'react-native-reanimated';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+import { View, StyleSheet } from 'react-native';
+import StarParticles from './StarParticles';
+import ProgressText from '@/components/loading/ProgressText';
+import type { SharedValue } from 'react-native-reanimated';
 
 interface ProgressContentProps {
   progress: number;
-  progressAnimated: Animated.SharedValue<number>;
+  progressAnimated: SharedValue<number>;
 }
+
+// 使用 React.memo 确保 StarParticles 不会因为 progress 变化而重新渲染
+const StarParticlesWrapper = React.memo(() => <StarParticles />);
+StarParticlesWrapper.displayName = 'StarParticlesWrapper';
 
 export default function ProgressContent({ progress, progressAnimated }: ProgressContentProps) {
   return (
-    <View className="items-center justify-center" style={{ marginTop: SCREEN_HEIGHT * 0.15 }}>
-      <View style={{ position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
-        <ProgressCircle progressAnimated={progressAnimated} />
-        <View style={{ position: 'absolute' }}>
-          <AnimatedSphere />
-        </View>
-      </View>
-
-      <ProgressPercentage progress={progress} />
-
-      <Text className="text-white/80 text-base mt-6 text-center">
-        正在为您制作定制化伴侣
-      </Text>
+    <View style={[styles.container]}>
+      {/* 星点动画 - 绝对定位，水平垂直居中，完全独立于百分比动画 */}
+      <StarParticlesWrapper />
+      {/* 百分比文字 - 绝对定位，水平垂直居中 */}
+      <ProgressText progress={progress} />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'relative',
+    width: '100%',
+    height: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
 

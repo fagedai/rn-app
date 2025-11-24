@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { SwitchSettingItem } from '../common/SwitchSettingItem';
+import { GlassContainer } from '../common/GlassContainer';
 
 interface SoftwareSettingsSectionProps {
   backgroundMusic: boolean;
@@ -18,19 +19,21 @@ export function SoftwareSettingsSection({
   return (
     <>
       <Text className="text-white text-base font-semibold mb-3 ml-4">软件设置</Text>
-      <View className="bg-white/10 rounded-2xl mb-6 overflow-hidden">
-        <SwitchSettingItem
-          label="背景音乐设置"
-          value={backgroundMusic}
-          onValueChange={onBackgroundMusicChange}
-        />
-        <View className="h-px bg-white/10" />
-        <SwitchSettingItem
-          label="机器人对话声音"
-          value={robotSound}
-          onValueChange={onRobotSoundChange}
-        />
-      </View>
+      <GlassContainer borderRadius={18} style={{ marginBottom: 24 }}>
+        <View style={{ paddingVertical: 28, paddingHorizontal: 20 }}>
+          <SwitchSettingItem
+            label="背景音乐设置"
+            value={backgroundMusic}
+            onValueChange={onBackgroundMusicChange}
+          />
+          <View className="h-px bg-white/10" style={{ marginVertical: 18 }} />
+          <SwitchSettingItem
+            label="机器人对话声音"
+            value={robotSound}
+            onValueChange={onRobotSoundChange}
+          />
+        </View>
+      </GlassContainer>
     </>
   );
 }

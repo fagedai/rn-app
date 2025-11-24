@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { GenderType } from '../../store/userStore';
+import { genderCodeToSymbol } from '../../utils/genderUtils';
 
 interface PersonalInfoItemProps {
   label: string;
@@ -14,27 +16,25 @@ export function PersonalInfoItem({
   gender,
   showArrow,
 }: PersonalInfoItemProps) {
+  const router = useRouter();
+  
+  // 将数字性别代码转换为显示符号
+  const genderSymbol = gender ? genderCodeToSymbol(gender) : '';
+
   return (
     <TouchableOpacity
-      className="px-4 py-4 flex-row items-center justify-between"
+      className="px-0 flex-row items-center justify-between"
+      style={{ paddingVertical: 0 }}
       activeOpacity={0.7}
+      onPress={() => {
+        router.push('/(settings)/edit-gender');
+      }}
     >
-      <Text className="text-white text-sm">{label}</Text>
+      <Text className="text-white" style={{ fontSize: 16 }}>{label}</Text>
       <View className="flex-row items-center">
-        {gender && (
-          <View className="w-6 h-6 rounded-full items-center justify-center mr-3">
-            <View
-              className="w-8 h-8 rounded-full items-center justify-center"
-              style={{
-                backgroundColor: gender === '女' ? '#ec4899' : '#3b82f6',
-              }}
-            >
-              <Text className="text-white text-lg font-bold">
-                {gender === '女' ? '♀' : '♂'}
-              </Text>
-            </View>
-          </View>
-        )}
+        {genderSymbol ? (
+          <Text className="text-white/60 text-base mr-2">{genderSymbol}</Text>
+        ) : null}
         {showArrow && (
           <Ionicons name="chevron-forward" size={20} color="#fff" />
         )}

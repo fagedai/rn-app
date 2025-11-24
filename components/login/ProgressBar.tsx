@@ -20,13 +20,13 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ progress = 10 }) => {
   });
 
   return (
-    <View className="mt-4 mb-8">
+    <View style={{ alignItems: 'center' }}>
       <View
         style={{
-          width: '100%',
-          height: 4,
+          width: 260,
+          height: 12,
           backgroundColor: 'rgba(255, 255, 255, 0.2)',
-          borderRadius: 2,
+          borderRadius: 6,
           overflow: 'hidden',
         }}
       >
@@ -34,8 +34,16 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ progress = 10 }) => {
           style={[
             {
               height: '100%',
-              backgroundColor: '#9333ea',
-              borderRadius: 2,
+              backgroundColor: 'rgba(255, 255, 255, 0.25)',
+              borderRadius: 6,
+              shadowColor: '#FFFFFF',
+              shadowOffset: {
+                width: 0,
+                height: 0,
+              },
+              shadowOpacity: 0.3,
+              shadowRadius: 4,
+              elevation: 4, // Android shadow
             },
             animatedStyle,
           ]}

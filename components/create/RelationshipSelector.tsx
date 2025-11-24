@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Svg, Polygon } from 'react-native-svg';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface RelationshipSelectorProps {
   selected: string;
@@ -16,66 +17,71 @@ export const RelationshipSelector: React.FC<RelationshipSelectorProps> = ({
 }) => {
   return (
     <View>
-      <Text className="text-white text-base font-medium mb-4">TA和我的关系</Text>
-      <View className="flex-row flex-wrap">
+      <Text className="text-white text-base font-medium mb-4">与我的关系</Text>
+      <View className="flex-row flex-wrap" style={{ gap: 8 }}>
         {options.map((option, index) => {
           const isSelected = selected === option;
+          // 计算每个选项的宽度：屏幕宽度减去左右padding(48px = 24px * 2)和3个gap(24px = 8px * 3)，除以4个选项
+          const optionWidth = (SCREEN_WIDTH - 48 - 24) / 4;
           return (
-            <View key={index} className="mr-3 mb-3 relative">
+            <View key={index} style={{ marginBottom: 12, width: optionWidth }}>
               <TouchableOpacity
                 onPress={() => onSelect(option)}
                 style={{
-                  borderRadius: 20,
+                  borderRadius: 24,
                   overflow: 'hidden',
-                  borderWidth: isSelected ? 0 : 1,
-                  borderColor: 'rgba(255, 255, 255, 0.3)',
+                  borderWidth: isSelected ? 1 : 1,
+                  borderColor: isSelected ? '#FFFFFF' : 'rgba(255, 255, 255, 0.2)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
                 {isSelected ? (
                   <LinearGradient
-                    colors={['#9333ea', '#ec4899']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
+                    colors={['#430047', '#4A4A4A']}
+                    start={{ x: 1, y: 0 }}
+                    end={{ x: 0, y: 1 }}
                     style={{
-                      paddingHorizontal: 18,
-                      paddingVertical: 15,
+                      paddingHorizontal: 16,
+                      paddingVertical: 10,
+                      width: '100%',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
                   >
-                    <Text className="text-white text-lg">{option}</Text>
+                    <Text 
+                      style={{
+                        color: '#FFFFFF',
+                        fontSize: 14,
+                        textAlign: 'center',
+                      }}
+                    >
+                      {option}
+                    </Text>
                   </LinearGradient>
                 ) : (
                   <View
                     style={{
-                      backgroundColor: 'transparent',
-                      paddingHorizontal: 18,
-                      paddingVertical: 15,
-                      borderRadius: 20,
+                      backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                      paddingHorizontal: 16,
+                      paddingVertical: 10,
+                      width: '100%',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
                   >
-                    <Text className="text-white text-lg">{option}</Text>
+                    <Text 
+                      style={{
+                        color: '#FFFFFF',
+                        fontSize: 14,
+                        textAlign: 'center',
+                      }}
+                    >
+                      {option}
+                    </Text>
                   </View>
                 )}
               </TouchableOpacity>
-              {/* 向上箭头指示器 - 绝对定位 */}
-              {isSelected && (
-                <View
-                  style={{
-                    position: 'absolute',
-                    bottom: -2,
-                    left: '50%',
-                    marginLeft: -6,
-                    width: 12,
-                    height: 8,
-                  }}
-                >
-                  <Svg width="12" height="8" viewBox="0 0 12 8">
-                    <Polygon
-                      points="6,0 0,8 12,8"
-                      fill="#3b82f6"
-                    />
-                  </Svg>
-                </View>
-              )}
             </View>
           );
         })}

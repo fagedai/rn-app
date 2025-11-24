@@ -1,11 +1,18 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Image } from 'react-native';
 
 export default function TitleHeader() {
   return (
     <View className="absolute top-20 items-center">
       <Text className="text-white/80 text-sm mb-1">AI Creator</Text>
-      <Text className="text-white text-4xl font-bold">NEST</Text>
+      <Image
+        source={require('@/assets/NEST.png')}
+        style={{
+          width: 57,
+          height: 36,
+          resizeMode: 'contain',
+        }}
+      />
     </View>
   );
 }

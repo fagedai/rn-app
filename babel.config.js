@@ -3,8 +3,16 @@ module.exports = function (api) {
   let plugins = [];
 
   plugins.push('react-native-worklets/plugin');
-  plugins.push('expo-router/babel');
-
+  plugins.push([
+    'module-resolver',
+    {
+      root: ['./'],
+      extensions: ['.tsx', '.ts', '.js', '.jsx', '.json'],
+      alias: {
+        '@': './',
+      },
+    },
+  ]);
   return {
     presets: [['babel-preset-expo', { jsxImportSource: 'nativewind' }], 'nativewind/babel'],
 

@@ -4,14 +4,19 @@ import { View } from 'react-native';
 interface StepIndicatorProps {
   currentStep: number; // 1, 2, or 3
   totalSteps?: number;
+  style?: object;
 }
 
 export const StepIndicator: React.FC<StepIndicatorProps> = ({
   currentStep,
   totalSteps = 3,
+  style,
 }) => {
   return (
-    <View className="flex-row justify-center items-center" style={{ marginBottom: 120 }}>
+    <View
+      className="flex-row justify-center items-center"
+      style={{ ...(style || {}) }}
+    >
       {Array.from({ length: totalSteps }).map((_, index) => {
         const step = index + 1;
         const isActive = step === currentStep;

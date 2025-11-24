@@ -35,7 +35,7 @@ export default function PlanSelection() {
 
   return (
     <ImageBackground
-      source={require('../../assets/background.png')}
+      source={require('@/assets/login_background.png')}
       resizeMode="cover"
       className="flex-1"
     >

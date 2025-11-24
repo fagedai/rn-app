@@ -1,38 +1,51 @@
 {
   "expo": {
-    "name": "my-expo-app",
-    "slug": "my-expo-app",
+    "name": "NEST",
+    "slug": "nest",
     "version": "1.0.0",
-
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/icon2.png"
     },
-
     "experiments": {
       "tsconfigPaths": true
     },
-
-    "plugins": [],
-    "scheme": "my-expo-app",
-
+    "plugins": [
+      "expo-font"
+    ],
+    "scheme": "nest",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-
+    "icon": "./assets/icon2.png",
     "userInterfaceStyle": "light",
-
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "需要访问相机以拍照发送图片",
+        "NSPhotoLibraryUsageDescription": "需要访问相册以选择图片发送"
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icon2.png",
         "backgroundColor": "#ffffff"
+      },
+      "package": "com.anonymous.nest",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "extra": {
+      "onepass": {
+        "appSecret": "+RS7zNeo6PiFHj2qzIKWN9HP4rP9hLol+octzq4iRC7qWq4muyEgt4ptW71kXnSH7Hez8QE7Tw2njA/A5ernIp630hSbQIoQUZOKMfC36f65mv813wjEbjxWFdWDTP89dvpe98mTEY16hGgtOydGPjNnTH46tnN3UaGmnwWr8rr1f2wU4bRxNEjFWK9wp3Wm/ynmD4yeqwmxtzvmd/qQ+sUm60P5858jgrmh/LbMnGoaC3dQHD5u0u0btS2KpS7idaDLpZY5YS7COzlUJhXJJbbrgWEMmmP43dQqRLwx/f0Z1YLJjiLLGw=="
       }
     }
   }

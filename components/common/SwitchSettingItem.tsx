@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Switch } from 'react-native';
+import { View, Text, Switch, StyleSheet, Platform } from 'react-native';
 
 interface SwitchSettingItemProps {
   label: string;
@@ -13,15 +13,35 @@ export function SwitchSettingItem({
   onValueChange,
 }: SwitchSettingItemProps) {
   return (
-    <View className="px-4 py-4 flex-row items-center justify-between">
-      <Text className="text-white text-sm">{label}</Text>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        trackColor={{ false: '#767577', true: '#8b5cf6' }}
-        thumbColor={value ? '#a78bfa' : '#f4f3f4'}
-      />
+    <View className="px-0 flex-row items-center justify-between" style={{ paddingVertical: 0 }}>
+      <Text className="text-white" style={{ fontSize: 16 }}>{label}</Text>
+      <View style={styles.switchContainer}>
+        <Switch
+          value={value}
+          onValueChange={onValueChange}
+          trackColor={{ 
+            false: 'rgba(118, 117, 119, 0.5)', 
+            true: '#49234F' // 退出登录按钮的颜色
+          }}
+          thumbColor={'#FFFFFF'}
+          ios_backgroundColor="rgba(118, 117, 119, 0.5)"
+          style={styles.switch}
+        />
+      </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  switchContainer: {
+    width: 48,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  switch: {
+    transform: [{ scaleX: 1.2 }, { scaleY: 1.2 }], // 等比例放大，使按钮和轨道等大
+  },
+});
 
