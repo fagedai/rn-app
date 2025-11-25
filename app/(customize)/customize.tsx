@@ -11,8 +11,7 @@ import { useSafeArea } from '@/hooks/useSafeArea';
 import { aiGenderCodeToSymbol } from '@/utils/genderUtils';
 import { saveAiSettings } from '@/services/api/aiSettings';
 import { useUserStore } from '@/store/userStore';
-import { Toast } from '@/components/common/Toast';
-import { getMemories } from '@/services/api/memory';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import { useFocusEffect } from '@react-navigation/native';
 // import { Ionicons } from '@expo/vector-icons';
 
@@ -23,21 +22,24 @@ export default function CustomizeAI() {
   const { getTopSpacing } = useSafeArea();
   const { userInfo } = useUserStore();
   const {
-    aiName,
+    nestName,
     aiGender,
     aiRelationship,
     setAiRelationship,
     aiMemory,
     setAiMemory,
     aiBackgroundStory,
+    nestLastMemory,
+    lastCreatedMemory,
+    setLastCreatedMemory,
     // aiVoice,
   } = useCreateStore();
   
   const DEFAULT_MEMORY = '随着时间的推移,NEST与用户之间的联系变得更加个性化。NEST会在夜间主动进行签到,感知用户何时感到孤独。';
   
   const [isTraining, setIsTraining] = useState(false);
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
   const previousRelationshipRef = useRef<string>(aiRelationship);
   const throttleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pendingRelationshipRef = useRef<string | null>(null);
@@ -45,11 +47,11 @@ export default function CustomizeAI() {
   // 不再从后端获取背景故事，直接使用 store 中的值
 
   const handleNamePress = () => {
-    router.push('/(customize)/edit-ai-name');
+    router.push('/(customize)/edit-nest-name');
   };
 
   const handleGenderPress = () => {
-    router.push('/(customize)/edit-ai-gender');
+    router.push('/(customize)/edit-nest-gender');
   };
 
   const handleMemoryPress = () => {
@@ -67,10 +69,10 @@ export default function CustomizeAI() {
   //   router.push('/(customize)/voice');
   // };
 
-  // 显示 Toast
-  const showToast = useCallback((message: string) => {
-    setToastMessage(message);
-    setToastVisible(true);
+  // 显示 ErrorModal
+  const showErrorModal = useCallback((message: string) => {
+    setErrorModalMessage(message);
+    setErrorModalVisible(true);
   }, []);
 
   // 保存关系（带节流和错误处理）
@@ -110,7 +112,7 @@ export default function CustomizeAI() {
         await saveAiSettings(
           {
             userId: userInfo.userId,
-            aiRelationship: relationshipToSave,
+            nestRelationship: relationshipToSave,
           },
           userInfo.token
         );
@@ -130,43 +132,51 @@ export default function CustomizeAI() {
         
         // 显示错误提示
         const errorMessage = error instanceof Error ? error.message : '更新失败，请重试';
-        showToast(errorMessage);
+        showErrorModal(errorMessage);
       }
     }, 800);
-  }, [aiRelationship, userInfo.token, userInfo.userId, setAiRelationship, showToast]);
+  }, [aiRelationship, userInfo.token, userInfo.userId, setAiRelationship, showErrorModal]);
 
-  // 加载最新记忆
-  const loadLatestMemory = useCallback(async () => {
-    if (!userInfo.profileId || !userInfo.token) {
-      // 如果没有 profileId 或 token，使用默认记忆
-      setAiMemory(DEFAULT_MEMORY);
-      return;
-    }
 
-    try {
-      // 获取所有记忆（不传 category，获取所有分类）
-      const allMemories = await getMemories(undefined, userInfo.profileId, userInfo.token);
-      
-      if (allMemories && allMemories.length > 0) {
-        // 有记忆，取最新的一条（已经按时间倒序排序）
-        const latestMemory = allMemories[0];
-        setAiMemory(latestMemory.content);
-      } else {
-        // 没有记忆，使用默认文本
-        setAiMemory(DEFAULT_MEMORY);
-      }
-    } catch (error) {
-      console.error('加载记忆失败:', error);
-      // 出错时使用默认记忆
-      setAiMemory(DEFAULT_MEMORY);
-    }
-  }, [userInfo.profileId, userInfo.token, setAiMemory]);
-
-  // 页面聚焦时刷新记忆（从记忆页面返回时）
+  // 页面聚焦时刷新记忆（从记忆页面返回时，使用本地记录的最后创建的记忆）
   useFocusEffect(
     useCallback(() => {
-      loadLatestMemory();
-    }, [loadLatestMemory])
+      // 使用 setTimeout 延迟状态更新，避免快速状态变化导致视图管理错误
+      const timer = setTimeout(() => {
+        try {
+          // 如果用户在记忆页面创建/编辑了记忆，使用本地记录的记忆
+          if (lastCreatedMemory) {
+            // 更新 aiMemory 和 nestLastMemory
+            setAiMemory(lastCreatedMemory);
+            const { setNestLastMemory } = useCreateStore.getState();
+            setNestLastMemory(lastCreatedMemory);
+            // 清除本地记录，避免下次误用
+            setLastCreatedMemory(null);
+            return;
+          }
+          
+          // 如果已经有 nestLastMemory，不需要重新请求
+          if (nestLastMemory) {
+            // 确保 aiMemory 也使用 nestLastMemory
+            if (aiMemory !== nestLastMemory) {
+              setAiMemory(nestLastMemory);
+            }
+            return;
+          }
+          
+          // 如果没有 nestLastMemory 且没有 lastCreatedMemory，使用默认记忆
+          if (!aiMemory || aiMemory === DEFAULT_MEMORY) {
+            setAiMemory(DEFAULT_MEMORY);
+          }
+        } catch (error) {
+          console.error('[Customize] useFocusEffect 错误:', error);
+        }
+      }, 100); // 延迟 100ms，避免快速状态更新
+
+      return () => {
+        clearTimeout(timer);
+      };
+    }, [nestLastMemory, lastCreatedMemory, setAiMemory, setLastCreatedMemory, aiMemory])
   );
 
   // 组件卸载时清理定时器
@@ -236,7 +246,7 @@ export default function CustomizeAI() {
                     textAlign: 'center',
                   }}
                 >
-                  {aiName}
+                  {nestName}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -250,13 +260,12 @@ export default function CustomizeAI() {
                 </Text>
                 <TouchableOpacity
                   onPress={handleGenderPress}
-                  style={{
-                    paddingHorizontal: 8,
-                    paddingVertical: 4,
-                  }}
                   activeOpacity={0.7}
+                  style={{ marginLeft: 8 }}
                 >
-                  <Text style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 14 }}>修改</Text>
+                  <Text style={{ color: '#FFFFFF', fontSize: 14, textDecorationLine: 'underline' }}>
+                    修改
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -273,7 +282,7 @@ export default function CustomizeAI() {
             {/* TA的记忆 */}
             <TextPreviewCard
               title="TA的记忆"
-              text={aiMemory}
+              text={nestLastMemory || aiMemory || DEFAULT_MEMORY}
               maxLines={3}
               onPress={handleMemoryPress}
             />
@@ -339,12 +348,11 @@ export default function CustomizeAI() {
         </View>
       </Modal>
 
-      {/* Toast 提示 */}
-      <Toast
-        visible={toastVisible}
-        message={toastMessage}
-        duration={2000}
-        onHide={() => setToastVisible(false)}
+      {/* ErrorModal 提示 */}
+      <ErrorModal
+        visible={errorModalVisible}
+        message={errorModalMessage}
+        onClose={() => setErrorModalVisible(false)}
       />
     </ImageBackground>
   );

@@ -7,9 +7,9 @@ import { LoginHeader } from '@/components/common/LoginHeader';
 import { InterestItem } from '@/components/settings/InterestItem';
 import { useUserStore } from '@/store/userStore';
 import { updateUserInfo } from '@/services/api/user';
-import { Toast } from '@/components/common/Toast';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import { useSafeArea } from '@/hooks/useSafeArea';
-import { useToast } from '@/hooks/useToast';
+import { useErrorModal } from '@/hooks/useErrorModal';
 
 // 兴趣数据配置
 interface InterestConfig {
@@ -98,7 +98,7 @@ export default function EditInterests() {
   const { userInfo, setInterests } = useUserStore();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const toast = useToast(1500);
+  const errorModal = useErrorModal();
 
   // 计算提示文字的位置：标题是绝对定位，header高度约44px，加上安全区域顶部，再加6px间距
   const hintTextContainerStyle = useMemo(() => ({
@@ -168,7 +168,7 @@ export default function EditInterests() {
       // 未选中，检查是否已达到最大选择数量
       if (selectedIds.length >= MAX_SELECTIONS) {
         // 已达到最大选择数量，显示提示
-        toast.show('最多选择十个兴趣');
+        errorModal.show('最多选择十个兴趣');
         return;
       }
       // 未达到最大选择数量，添加选择
@@ -221,7 +221,7 @@ export default function EditInterests() {
       setInterests(selectedLabels);
       
       // 显示成功提示
-      toast.show('已保存');
+      errorModal.show('已保存', '保存成功');
       
       // 延迟返回，让用户看到成功提示
       setTimeout(() => {
@@ -231,7 +231,7 @@ export default function EditInterests() {
       console.error('保存兴趣失败:', error);
       // 显示失败提示
       const errorMessage = error instanceof Error ? error.message : '保存失败，请稍后重试';
-      toast.show(errorMessage);
+      errorModal.show(errorMessage);
       // 失败时留在本页，保持用户选择
     } finally {
       setLoading(false);
@@ -318,11 +318,11 @@ export default function EditInterests() {
         </LinearGradient>
       </View>
       
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        duration={toast.duration}
-        onHide={toast.hide}
+      <ErrorModal
+        visible={errorModal.visible}
+        message={errorModal.error}
+        title={errorModal.title || '操作失败'}
+        onClose={errorModal.hide}
       />
     </ImageBackground>
   );

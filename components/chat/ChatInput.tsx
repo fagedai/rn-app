@@ -12,6 +12,7 @@ import { generateUUID } from '@/utils/uuid';
 import { uploadImageToSupabase, getFileSizeInMB } from '@/services/imageUpload';
 import { sendMessageStream } from '@/services/api/chat';
 import { useUserStore } from '@/store/userStore';
+import { ErrorModal } from '@/components/common/ErrorModal';
 
 interface ChatInputProps {
   onSend: (content: string) => void;
@@ -151,15 +152,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           Alert.alert('需要相册权限', '请允许访问相册以选择图片');
         }
         if (cameraStatus !== 'granted') {
-          Alert.alert('需要相机权限', '请允许访问相机以拍照');
+          showErrorModal('请允许访问相机以拍照', '需要相机权限');
         }
       }
     })();
   }, []);
 
-  // 显示 Toast 提示（使用 Alert 作为临时方案，后续可以替换为 Toast 组件）
-  const showToast = (message: string) => {
-    Alert.alert('', message, [{ text: '确定' }]);
+  // 显示 ErrorModal 提示
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
+  const showErrorModal = (message: string) => {
+    setErrorModalMessage(message);
+    setErrorModalVisible(true);
   };
 
   // 处理相册选择 - 完整流程：选图 → 裁剪 → 压缩 → 上传 → 发送
@@ -188,7 +192,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       await processAndUploadImage(croppedUri);
     } catch (error) {
       console.error('选择图片失败:', error);
-      showToast('选择图片失败，请重试');
+      showErrorModal('选择图片失败，请重试');
     }
   };
 
@@ -217,7 +221,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       await processAndUploadImage(croppedUri);
     } catch (error) {
       console.error('拍照失败:', error);
-      showToast('拍照失败，请重试');
+      showErrorModal('拍照失败，请重试');
     }
   };
 
@@ -235,7 +239,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       
       // 检查用户信息
       if (!userInfo.userId || !userInfo.token) {
-        showToast('用户未登录，请重新登录');
+        showErrorModal('用户未登录，请重新登录');
         return;
       }
       
@@ -243,14 +247,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
       // 步骤1: 检查图片格式
       if (!isSupportedImageFormat(imageUri)) {
-        showToast('图片格式不支持，仅支持 jpeg/png/heic/webp');
+        showErrorModal('图片格式不支持，仅支持 jpeg/png/heic/webp');
         return;
       }
 
       // 步骤2: 检查文件大小
       const fileSizeMB = await getFileSizeInMB(imageUri);
       if (fileSizeMB > 10) {
-        showToast('图片过大');
+        showErrorModal('图片过大');
         return;
       }
 
@@ -414,7 +418,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               status: 'failed',
             });
             setStreamingMessageId(null);
-            showToast('发送图片失败，请重试');
+            showErrorModal('发送图片失败，请重试');
           }
         );
       } catch (uploadError) {
@@ -428,17 +432,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         // 检查错误类型
         if (uploadError instanceof Error) {
           if (uploadError.message.includes('网络') || uploadError.message.includes('Network')) {
-            showToast('网络异常，请重试');
+            showErrorModal('网络异常，请重试');
           } else {
-            showToast('图片发送失败，请重试');
+            showErrorModal('图片发送失败，请重试');
           }
         } else {
-          showToast('图片发送失败，请重试');
+          showErrorModal('图片发送失败，请重试');
         }
       }
     } catch (error) {
       console.error('处理图片失败:', error);
-      showToast('图片处理失败，请重试');
+      showErrorModal('图片处理失败，请重试');
     }
   };
 
@@ -544,6 +548,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           setShowEmojiDrawer(false);
         }}
         inputContainerHeight={inputContainerHeight}
+      />
+
+      {/* ErrorModal 提示 */}
+      <ErrorModal
+        visible={errorModalVisible}
+        message={errorModalMessage}
+        onClose={() => setErrorModalVisible(false)}
       />
     </View>
   );

@@ -94,7 +94,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRetry }
     );
   }
 
-  // 机器人消息：透明背景
+  // NEST消息：透明背景
   return (
     <View
       style={[

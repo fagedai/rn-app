@@ -47,7 +47,7 @@ export async function getArchetypeBackstory(
     const responseText = await response.text();
 
     if (!response.ok) {
-      console.log('[Archetype] 响应错误:', { status: response.status, body: responseText });
+      console.log('[Archetype] 响应:', responseText);
       throw new Error(responseText || '获取背景故事失败，请稍后重试');
     }
 
@@ -57,20 +57,18 @@ export async function getArchetypeBackstory(
       responseData = JSON.parse(responseText);
     } catch {
       // 如果不是 JSON 格式，直接返回响应文本
-      console.log('[Archetype] 响应:', { status: response.status, body: responseText });
       return responseText;
     }
 
     // 检查后端返回的 code 字段
-    if (responseData.code !== undefined && responseData.code !== 200) {
+    if (responseData && responseData.code !== undefined && responseData.code !== 200) {
       const errorMessage = responseData.message || responseText || '获取背景故事失败，请稍后重试';
-      console.log('[Archetype] 响应错误:', { status: response.status, body: responseText, code: responseData.code });
       throw new Error(errorMessage);
     }
 
     // 提取背景故事（从 data 字段中，如果没有 data 字段则使用整个响应）
-    const backstory = responseData.data || responseText;
-    console.log('[Archetype] 响应成功:', { status: response.status, backstory });
+    const backstory = responseData?.data || responseText;
+    console.log('[Archetype] 响应:', backstory);
 
     return backstory;
   } catch (error) {

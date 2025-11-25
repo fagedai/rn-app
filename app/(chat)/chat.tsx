@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useChatStore, Message, MessageRole } from '@/store/chatStore';
 import { useCreateStore } from '@/store/createStore';
 import { useUserStore } from '@/store/userStore';
+import { getNestInfo } from '@/services/api/aiSettings';
 import { useSafeArea } from '@/hooks/useSafeArea';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 import { GreetingBubble } from '@/components/chat/GreetingBubble';
@@ -57,7 +58,7 @@ export default function ChatScreen() {
     setPagination,
   } = useChatStore();
 
-  const { aiRelationship } = useCreateStore();
+  const { aiRelationship, nestName } = useCreateStore();
   const { userInfo } = useUserStore();
   const { bottom } = useSafeArea();
 
@@ -69,6 +70,7 @@ export default function ChatScreen() {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [historyMessageCount, setHistoryMessageCount] = useState(0); // 记录历史消息数量
+  const nestInfoLoadedRef = useRef(false); // 标记是否已加载 nestInfo
 
   // 初始化：判断进入方式
   useEffect(() => {
@@ -88,12 +90,63 @@ export default function ChatScreen() {
         } else {
           // 常规进入
           setFromHistory(false);
+          
+          // 老用户第一次进入chat页面时，获取AI基本设置信息
+          if (userInfo.isNewUser === 0 && !nestInfoLoadedRef.current && userInfo.token) {
+            try {
+              console.log('[Chat] 老用户首次进入，获取AI基本设置信息');
+              const nestInfo = await getNestInfo(userInfo.token);
+              
+              // 更新 createStore
+              const { 
+                setNestName, 
+                setNestRelationship, 
+                setNestLastMemory, 
+                setNestBackstory,
+                setnestName,
+                setAiRelationship,
+                setAiBackgroundStory,
+              } = useCreateStore.getState();
+              
+              if (nestInfo.profile_id) {
+                // 更新 userStore 中的 profileId（如果还没有）
+                const { setProfileId } = useUserStore.getState();
+                if (!userInfo.profileId) {
+                  setProfileId(nestInfo.profile_id);
+                }
+              }
+              
+              // 更新 nestInfo 相关字段
+              if (nestInfo.nest_name) {
+                setNestName(nestInfo.nest_name);
+                setnestName(nestInfo.nest_name);
+              }
+              if (nestInfo.nest_relationship) {
+                setNestRelationship(nestInfo.nest_relationship);
+                setAiRelationship(nestInfo.nest_relationship);
+              }
+              if (nestInfo.nest_last_memory !== null) {
+                setNestLastMemory(nestInfo.nest_last_memory);
+              }
+              if (nestInfo.nest_backstory) {
+                setNestBackstory(nestInfo.nest_backstory);
+                setAiBackgroundStory(nestInfo.nest_backstory);
+              }
+              
+              nestInfoLoadedRef.current = true;
+              console.log('[Chat] AI基本设置信息已加载:', nestInfo);
+            } catch (error) {
+              console.error('[Chat] 获取AI基本设置信息失败:', error);
+              // 失败不影响正常使用，静默处理
+              nestInfoLoadedRef.current = true; // 标记为已尝试，避免重复请求
+            }
+          }
         }
 
         // 使用默认问候语（不再调用 API）
-        const { aiName } = useCreateStore.getState();
+        const { nestName } = useCreateStore.getState();
         const defaultGreeting = '嗨～终于见到你啦，我是Lisa💜';
-        const finalGreeting = defaultGreeting.replace(/Lisa/g, aiName);
+        const finalGreeting = defaultGreeting.replace(/Lisa/g, nestName);
         setGreetingMessage(finalGreeting);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : '初始化失败';
@@ -105,6 +158,23 @@ export default function ChatScreen() {
     initializeChat();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 当 nestName 变化时，更新招呼语
+  useEffect(() => {
+    if (greetingMessage && nestName) {
+      // 匹配 "我是XXX💜" 格式，替换名字
+      const updatedGreeting = greetingMessage.replace(/我是[^💜]+💜/g, `我是${nestName}💜`);
+      // 如果招呼语中包含旧名字（可能是其他格式），也替换（如 "Lisa"）
+      const finalGreeting = updatedGreeting.replace(/Lisa/g, nestName);
+      if (finalGreeting !== greetingMessage) {
+        setGreetingMessage(finalGreeting);
+      }
+    } else if (greetingMessage && !nestName) {
+      // 如果名字为空，使用默认名字
+      const defaultGreeting = '嗨～终于见到你啦，我是Lisa💜';
+      setGreetingMessage(defaultGreeting);
+    }
+  }, [nestName, greetingMessage, setGreetingMessage]);
 
   // 加载历史消息（从历史记录进入时调用）
   const loadHistoryMessages = async (conversationId: string) => {
@@ -240,7 +310,7 @@ export default function ChatScreen() {
           uploadProgress: 100,
         });
 
-        // 发送图片消息到后端（触发机器人图像理解任务）
+        // 发送图片消息到后端（触发NEST图像理解任务）
         if (userInfo.userId && userInfo.token) {
           const messageId = generateUUID();
           const clientTs = Date.now();
@@ -379,7 +449,7 @@ export default function ChatScreen() {
               status: 'streaming',
             });
           } else {
-            // 创建机器人消息，时间戳应该比用户消息稍晚
+            // 创建NEST消息，时间戳应该比用户消息稍晚
             addMessage(finalSessionId, {
               message_id: currentStreamingId,
               session_id: finalSessionId,
@@ -638,7 +708,7 @@ export default function ChatScreen() {
                     textAlign: 'center',
                   }}
                 >
-                  Lisa
+                  {nestName}
                 </Text>
                 <Text style={{ fontSize: 10, color: '#D9D9D9', marginTop: 2 }}>
                   {aiRelationship}

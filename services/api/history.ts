@@ -68,10 +68,9 @@ export async function getHistoryList(token: string): Promise<GetHistoryListRespo
     } catch {
       // 如果不是 JSON 格式，检查 HTTP 状态码
       if (!response.ok) {
-        console.log('[History] 响应:', { status: response.status, body: responseText });
+        console.log('[History] 响应:', responseText);
         throw new Error(responseText || '获取历史记录失败');
       }
-      console.log('[History] 响应: 非JSON格式', { status: response.status, body: responseText });
       // 返回空列表
       return { records: [], total: 0 };
     }
@@ -82,7 +81,6 @@ export async function getHistoryList(token: string): Promise<GetHistoryListRespo
       const isSuccess = responseData.code === 0 || responseData.code === 200;
       if (!isSuccess) {
         const errorMessage = responseData.message || responseText || '获取历史记录失败';
-        console.log('[History] 响应错误:', { status: response.status, body: responseText, code: responseData.code });
         throw new Error(errorMessage);
       }
 
@@ -101,7 +99,6 @@ export async function getHistoryList(token: string): Promise<GetHistoryListRespo
     }
 
     // 默认返回空列表
-    console.log('[History] 响应: 格式不符合预期，返回空列表', responseData);
     return { records: [], total: 0 };
   } catch (error) {
     if (error instanceof Error) {
@@ -115,7 +112,6 @@ export async function getHistoryList(token: string): Promise<GetHistoryListRespo
         throw new Error('网络连接失败，请检查网络设置后重试');
       }
     }
-    console.log('[History] 响应失败:', error);
     throw error;
   }
 }
@@ -177,10 +173,9 @@ export async function getHistoryMessages(
     } catch {
       // 如果不是 JSON 格式，检查 HTTP 状态码
       if (!response.ok) {
-        console.log('[History] 响应:', { status: response.status, body: responseText });
+        console.log('[History] 响应:', responseText);
         throw new Error(responseText || '获取历史消息失败');
       }
-      console.log('[History] 响应: 非JSON格式', { status: response.status, body: responseText });
       return null;
     }
 
@@ -190,7 +185,6 @@ export async function getHistoryMessages(
       const isSuccess = responseData.code === 0 || responseData.code === 200;
       if (!isSuccess) {
         const errorMessage = responseData.message || responseText || '获取历史消息失败';
-        console.log('[History] 响应错误:', { status: response.status, body: responseText, code: responseData.code });
         throw new Error(errorMessage);
       }
 
@@ -209,7 +203,6 @@ export async function getHistoryMessages(
     }
 
     // 如果没有数据，返回 null
-    console.log('[History] 响应: 数据为空', responseData);
     return null;
   } catch (error) {
     if (error instanceof Error) {
@@ -223,7 +216,6 @@ export async function getHistoryMessages(
         throw new Error('网络连接失败，请检查网络设置后重试');
       }
     }
-    console.log('[History] 响应失败:', error);
     throw error;
   }
 }

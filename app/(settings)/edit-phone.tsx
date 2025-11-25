@@ -5,11 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUserStore } from '@/store/userStore';
-import { Toast } from '@/components/common/Toast';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import { GlassContainer } from '@/components/common/GlassContainer';
 import { SingleNavButton } from '@/components/common/SingleNavButton';
 import { sendChangePhoneCode, confirmChangePhone } from '@/services/api/user';
-import { useToast } from '@/hooks/useToast';
+import { useErrorModal } from '@/hooks/useErrorModal';
 
 
 export default function EditPhone() {
@@ -20,7 +20,7 @@ export default function EditPhone() {
   const [countdown, setCountdown] = useState(0);
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
-  const toast = useToast(2000);
+  const errorModal = useErrorModal();
   const lastSendTimeRef = useRef<number>(0);
 
   // 倒计时
@@ -51,13 +51,13 @@ export default function EditPhone() {
 
     // 格式校验
     if (!validatePhone(phone)) {
-      toast.show('手机号格式不正确');
+      errorModal.show('手机号格式不正确');
       return;
     }
 
     // 检查是否有 token
     if (!userInfo.token) {
-      toast.show('用户未登录，请重新登录');
+      errorModal.show('用户未登录，请重新登录');
       return;
     }
 
@@ -66,16 +66,16 @@ export default function EditPhone() {
       
       // 调用修改手机号的发送验证码接口
       await sendChangePhoneCode(phone, userInfo.token);
-      toast.show('验证码已发送');
+      errorModal.show('验证码已发送', '发送成功');
       setCountdown(60);
     } catch (error) {
       console.error('发送验证码失败:', error);
       const errorMessage = error instanceof Error ? error.message : '验证码发送失败，请重试';
-      toast.show(errorMessage);
+      errorModal.show(errorMessage);
     } finally {
       setSending(false);
     }
-  }, [phone, userInfo.token, toast]);
+  }, [phone, userInfo.token, errorModal]);
 
   // 保存
   const handleSave = useCallback(async () => {
@@ -85,7 +85,7 @@ export default function EditPhone() {
 
     // 检查是否有 token
     if (!userInfo.token) {
-      toast.show('用户未登录，请重新登录');
+      errorModal.show('用户未登录，请重新登录');
       return;
     }
 
@@ -99,7 +99,7 @@ export default function EditPhone() {
       setPhone(phone);
       
       // 显示成功提示
-      toast.show('手机号修改成功');
+      errorModal.show('手机号修改成功', '修改成功');
       
       // 延迟返回
       setTimeout(() => {
@@ -108,11 +108,11 @@ export default function EditPhone() {
     } catch (error) {
       console.error('保存失败:', error);
       const errorMessage = error instanceof Error ? error.message : '验证码错误或已过期';
-      toast.show(errorMessage);
+      errorModal.show(errorMessage);
     } finally {
       setSaving(false);
     }
-  }, [phone, code, userInfo.token, setPhone, toast, router]);
+  }, [phone, code, userInfo.token, setPhone, errorModal, router]);
 
   // 获取当前手机号（用于说明文字）
   const currentPhone = userInfo.phone || 'xxxx';
@@ -230,11 +230,11 @@ export default function EditPhone() {
             />
         </View>
       </SafeAreaView>
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        duration={toast.duration}
-        onHide={toast.hide}
+      <ErrorModal
+        visible={errorModal.visible}
+        message={errorModal.error}
+        title={errorModal.title || '操作失败'}
+        onClose={errorModal.hide}
       />
     </ImageBackground>
   );

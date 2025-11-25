@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassContainer } from '@/components/common/GlassContainer';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MemoryCategory, MemoryItem, getMemories, deleteMemories } from '@/services/api/memory';
-import { Toast } from '@/components/common/Toast';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import { useSafeArea } from '@/hooks/useSafeArea';
 import { useUserStore } from '@/store/userStore';
 
@@ -33,8 +33,8 @@ export default function MemoryScreen() {
   const [loading, setLoading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
   const [contentHeight, setContentHeight] = useState(0); // 列表内容总高度
   const { top, bottom } = useSafeArea();
   
@@ -86,12 +86,12 @@ export default function MemoryScreen() {
   const loadMemories = useCallback(async () => {
     if (!userInfo.profileId) {
       console.error('profileId 不存在，无法加载记忆');
-      showToast('请先完成问卷');
+      showErrorModal('请先完成问卷');
       return;
     }
     if (!userInfo.token) {
       console.error('token 不存在，无法加载记忆');
-      showToast('请先登录');
+      showErrorModal('请先登录');
       return;
     }
     setLoading(true);
@@ -100,7 +100,7 @@ export default function MemoryScreen() {
       setMemories(data);
     } catch (error) {
       console.error('加载记忆失败:', error);
-      showToast('加载失败，请重试');
+      showErrorModal('加载失败，请重试');
     } finally {
       setLoading(false);
     }
@@ -149,11 +149,11 @@ export default function MemoryScreen() {
   const handleDelete = async () => {
     if (selectedIds.size === 0) return;
     if (!userInfo.profileId) {
-      showToast('请先完成问卷');
+      showErrorModal('请先完成问卷');
       return;
     }
     if (!userInfo.token) {
-      showToast('请先登录');
+      showErrorModal('请先登录');
       return;
     }
 
@@ -163,14 +163,14 @@ export default function MemoryScreen() {
       await loadMemories();
     } catch (error) {
       console.error('删除失败:', error);
-      showToast('删除失败，请重试');
+      showErrorModal('删除失败，请重试');
     }
   };
 
-  // 显示 Toast
-  const showToast = (message: string) => {
-    setToastMessage(message);
-    setToastVisible(true);
+  // 显示 ErrorModal
+  const showErrorModal = (message: string) => {
+    setErrorModalMessage(message);
+    setErrorModalVisible(true);
   };
 
 
@@ -430,11 +430,11 @@ export default function MemoryScreen() {
         </View>
       </SafeAreaView>
 
-      {/* Toast */}
-      <Toast
-        visible={toastVisible}
-        message={toastMessage}
-        onHide={() => setToastVisible(false)}
+      {/* ErrorModal */}
+      <ErrorModal
+        visible={errorModalVisible}
+        message={errorModalMessage}
+        onClose={() => setErrorModalVisible(false)}
       />
     </ImageBackground>
   );

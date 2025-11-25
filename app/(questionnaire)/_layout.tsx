@@ -9,9 +9,9 @@ export default function QuestionnaireLoginLayout() {
       <Stack.Screen name="birthday" />
       <Stack.Screen name="role" />
       <Stack.Screen name="nest-gender" />
-      <Stack.Screen name="ai-expectation" />
+      <Stack.Screen name="nest-expectation" />
       <Stack.Screen name="experience" />
-      <Stack.Screen name="ai-role-type" />
+      <Stack.Screen name="nest-role-type" />
     </Stack>
   );
 }

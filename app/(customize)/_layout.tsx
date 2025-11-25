@@ -14,6 +14,8 @@ export default function CustomizeLayout() {
       <Stack.Screen name="memory-add" />
       <Stack.Screen name="memory-edit" />
       <Stack.Screen name="memory-edit-list" />
+      <Stack.Screen name="edit-nest-name" />
+      <Stack.Screen name="edit-nest-gender" />
     </Stack>
   );
 }

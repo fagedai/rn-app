@@ -28,7 +28,7 @@ export function SoftwareSettingsSection({
           />
           <View className="h-px bg-white/10" style={{ marginVertical: 18 }} />
           <SwitchSettingItem
-            label="机器人对话声音"
+            label="NEST对话声音"
             value={robotSound}
             onValueChange={onRobotSoundChange}
           />

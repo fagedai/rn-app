@@ -14,9 +14,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUserStore } from '@/store/userStore';
 import { updateUserInfo } from '@/services/api/user';
 import { GlassContainer } from '@/components/common/GlassContainer';
-import { Toast } from '@/components/common/Toast';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import { UserBackgroundHelpModal } from '@/components/common/UserBackgroundHelpModal';
-import { useToast } from '@/hooks/useToast';
+import { useErrorModal } from '@/hooks/useErrorModal';
 
 const USER_BACKGROUND_PLACEHOLDER = '用户个人的背景故事介绍';
 
@@ -31,7 +31,7 @@ export default function EditUserBackground() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const toast = useToast(1500);
+  const errorModal = useErrorModal();
 
   // 初始化：从 userStore 获取用户背景故事
   useEffect(() => {
@@ -72,7 +72,7 @@ export default function EditUserBackground() {
       // 调用后端接口保存（只传变更的字段）
       if (userInfo.token) {
         await updateUserInfo(userInfo.token, {
-          background: text || null, // 如果为空字符串，传 null
+          background: text || undefined, // 如果为空字符串，传 undefined
         });
       }
 
@@ -80,16 +80,16 @@ export default function EditUserBackground() {
       setBackgroundStory(text);
 
       // 显示成功提示
-      toast.show('已成功保存');
+      errorModal.show('已成功保存', '保存成功');
 
-      // 延迟返回，让用户看到 Toast
+      // 延迟返回，让用户看到提示
       setTimeout(() => {
         router.back();
       }, 1500);
     } catch (error) {
       console.error('保存用户背景故事失败:', error);
       const errorMessage = error instanceof Error ? error.message : '保存失败，请稍后重试';
-      toast.show(errorMessage);
+      errorModal.show(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -279,12 +279,12 @@ export default function EditUserBackground() {
       {/* 帮助弹窗 */}
       <UserBackgroundHelpModal visible={showHelpModal} onClose={() => setShowHelpModal(false)} />
 
-      {/* Toast 提示 */}
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        duration={toast.duration}
-        onHide={toast.hide}
+      {/* ErrorModal 提示 */}
+      <ErrorModal
+        visible={errorModal.visible}
+        message={errorModal.error}
+        title={errorModal.title || '操作失败'}
+        onClose={errorModal.hide}
       />
     </ImageBackground>
   );

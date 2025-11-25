@@ -15,8 +15,9 @@ import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCreateStore } from '@/store/createStore';
 import { GlassContainer } from '@/components/common/GlassContainer';
-// import { saveBackgroundStory } from '@/services/api/aiSettings'; // 已移除
-import { Toast } from '@/components/common/Toast';
+import { saveAiSettings } from '@/services/api/aiSettings';
+import { useUserStore } from '@/store/userStore';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import { HelpModal } from '@/components/common/HelpModal';
 
 const BACKGROUND_STORY_PLACEHOLDER =
@@ -28,6 +29,7 @@ export default function TextEditor() {
   const router = useRouter();
   const params = useLocalSearchParams<{ type: 'memory' | 'backgroundStory'; title: string }>();
   const { aiMemory, setAiMemory, aiBackgroundStory, setAiBackgroundStory } = useCreateStore();
+  const { userInfo } = useUserStore();
 
   const isBackgroundStory = params.type === 'backgroundStory';
   const [text, setText] = useState('');
@@ -35,8 +37,8 @@ export default function TextEditor() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
   const [fullScreenLoading, setFullScreenLoading] = useState(false);
 
   // 初始化：获取背景故事或使用记忆
@@ -67,10 +69,10 @@ export default function TextEditor() {
     }
   };
 
-  // 显示 Toast
-  const showToast = (message: string) => {
-    setToastMessage(message);
-    setToastVisible(true);
+  // 显示 ErrorModal
+  const showErrorModal = (message: string) => {
+    setErrorModalMessage(message);
+    setErrorModalVisible(true);
   };
 
   // 保存
@@ -81,14 +83,22 @@ export default function TextEditor() {
         setSaving(true);
         setFullScreenLoading(true);
 
-        // 背景故事功能已移除，仅更新本地 store
-        // await saveBackgroundStory(text);
+        // 调用后端接口保存背景故事
+        if (userInfo.token && userInfo.userId) {
+          await saveAiSettings(
+            {
+              userId: userInfo.userId,
+              nestBackstory: text,
+            },
+            userInfo.token
+          );
+        }
 
         // 更新本地 store
         setAiBackgroundStory(text);
 
         // 显示成功提示
-        showToast('已成功保存');
+        showErrorModal('已成功保存', '保存成功');
 
         // 延迟返回，让用户看到 Toast
         setTimeout(() => {
@@ -97,7 +107,8 @@ export default function TextEditor() {
       } catch (error) {
         console.error('保存背景故事失败:', error);
         setFullScreenLoading(false);
-        showToast('保存失败，请稍后重试');
+        const errorMessage = error instanceof Error ? error.message : '保存失败，请稍后重试';
+        showErrorModal(errorMessage);
       } finally {
         setSaving(false);
       }
@@ -352,12 +363,11 @@ export default function TextEditor() {
       {/* 帮助弹窗 */}
       <HelpModal visible={showHelpModal} onClose={() => setShowHelpModal(false)} />
 
-      {/* Toast 提示 */}
-      <Toast
-        visible={toastVisible}
-        message={toastMessage}
-        duration={1500}
-        onHide={() => setToastVisible(false)}
+      {/* ErrorModal 提示 */}
+      <ErrorModal
+        visible={errorModalVisible}
+        message={errorModalMessage}
+        onClose={() => setErrorModalVisible(false)}
       />
 
       {/* 全屏 Loading（训练AI时） */}

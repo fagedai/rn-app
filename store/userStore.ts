@@ -18,6 +18,7 @@ export interface UserInfo {
   token: string | null; // 登录 token
   userId: string | null; // 用户 ID
   profileId: string | null; // AI Profile ID（从提交问卷接口返回）
+  isNewUser: number | null; // 是否新用户：0=已注册且已填完问卷，1=新用户（未完成问卷）
 }
 
 interface UserState {
@@ -32,6 +33,7 @@ interface UserState {
   setToken: (token: string) => void;
   setUserId: (userId: string) => void;
   setProfileId: (profileId: string) => void;
+  setIsNewUser: (isNewUser: number) => void;
   resetUserInfo: () => void;
 }
 
@@ -46,6 +48,7 @@ const initialUserInfo: UserInfo = {
   token: null,
   userId: null,
   profileId: null,
+  isNewUser: null,
 };
 
 export const useUserStore = create<UserState>((set) => ({
@@ -89,6 +92,10 @@ export const useUserStore = create<UserState>((set) => ({
   setProfileId: (profileId) =>
     set((state) => ({
       userInfo: { ...state.userInfo, profileId },
+    })),
+  setIsNewUser: (isNewUser) =>
+    set((state) => ({
+      userInfo: { ...state.userInfo, isNewUser },
     })),
   resetUserInfo: () =>
     set({

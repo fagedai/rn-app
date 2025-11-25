@@ -5,11 +5,11 @@ import { useRouter } from 'expo-router';
 import Constants from 'expo-constants';
 import { LoginHeader } from '@/components/common/LoginHeader';
 import { PhoneDisplay } from '@/components/login/PhoneDisplay';
-import { useUserStore } from '@/store/userStore';
+import { useUserStore, GenderType } from '@/store/userStore';
 import { TermsModal } from '@/components/common/TermsModal';
 import { ErrorModal } from '@/components/common/ErrorModal';
 import { useAgreementStore } from '@/store/agreementStore';
-import { checkVerifyEnable, initOnepass, isOnepassAvailable, login as onepassLogin, quitLoginPage } from '@/services/onepass';
+import { checkVerifyEnable, initOnepass, isOnepassAvailable, login as onepassLogin, preLogin, quitLoginPage } from '@/services/onepass';
 import { exchangeOnePassToken } from '@/services/api/login';
 import { getUserInfo } from '@/services/api/user';
 import { useCreateStore } from '@/store/createStore';
@@ -22,12 +22,13 @@ type OnepassExtraConfig = {
 
 const extra = (Constants.expoConfig?.extra as { onepass?: OnepassExtraConfig } | undefined)?.onepass;
 
-const ONEPASS_APP_KEY = process.env.EXPO_PUBLIC_ONEPASS_APP_KEY ?? extra?.appKey ?? '';
-const ONEPASS_APP_SECRET = process.env.EXPO_PUBLIC_ONEPASS_APP_SECRET ?? extra?.appSecret ?? '';
+// 优先使用环境变量，如果没有则使用 app.json 中的配置（Release 构建时环境变量可能为空）
+const ONEPASS_APP_KEY = process.env.EXPO_PUBLIC_ONEPASS_APP_KEY || extra?.appKey || '';
+const ONEPASS_APP_SECRET = process.env.EXPO_PUBLIC_ONEPASS_APP_SECRET || extra?.appSecret || '';
 
 export default function LoginMain() {
   const router = useRouter();
-  const { userInfo, setPhone, setToken, setUserId, setName, setGender, setBirthday, setInterests, setBackgroundStory } = useUserStore();
+  const { userInfo, setPhone, setToken, setUserId, setName, setGender, setBirthday, setInterests, setBackgroundStory, setIsNewUser } = useUserStore();
   const { bottom } = useSafeArea();
   const [displayPhone, setDisplayPhone] = useState(
     userInfo.phone || '等待授权获取本机号码',
@@ -91,8 +92,32 @@ export default function LoginMain() {
 
       try {
         setLoading(true);
+        console.log('[Login] 开始一键登录流程');
+        
+        // 步骤 1: 预取号（必须步骤，用于加速授权页加载）
+        console.log('[Login] 步骤 1: 调用 preLogin 进行预取号');
+        try {
+          await preLogin(5000);
+          console.log('[Login] 预取号成功');
+        } catch (preLoginError) {
+          console.warn('[Login] 预取号失败，但继续尝试登录:', preLoginError);
+          // 预取号失败不阻止登录流程，但可能会影响授权页加载速度
+        }
+        
+        // 步骤 2: 唤起授权页并获取 token
+        console.log('[Login] 步骤 2: 调用 onepassLogin 唤起授权页');
         const { token } = await onepassLogin();
+        console.log('[Login] onepassLogin 成功，token:', token ? `${token.substring(0, 20)}...` : '未提供');
+        
+        console.log('[Login] 调用 exchangeOnePassToken');
         const data = await exchangeOnePassToken(token);
+        console.log('[Login] exchangeOnePassToken 成功，data:', {
+          phoneNumber: data.phoneNumber,
+          hasToken: !!data.token,
+          hasUserId: !!data.userId,
+          nextStep: data.nextStep
+        });
+        
         setPhone(data.phoneNumber);
         setDisplayPhone(data.phoneNumber);
         setPhoneAuthorized(true);
@@ -107,15 +132,47 @@ export default function LoginMain() {
           }
         }
 
+        console.log('[Login] 一键登录流程完成');
         // 不再自动跳转，等待用户点击同意条款并点击一键登录按钮
       } catch (error) {
+        const errorMessage = (error as Error).message || '一键登录失败';
+        const errorCode = (error as any)?.code;
+        
+        // 如果用户切换其他登录方式，直接跳转，不显示错误
+        if (errorCode === 'USER_SWITCHED_LOGIN_METHOD' || errorMessage.includes('USER_SWITCHED_LOGIN_METHOD') || errorMessage.includes('700001') || errorMessage.includes('用户切换其他登录方式')) {
+          console.log('[Login] 用户切换其他登录方式，跳转到手机号登录页面');
+          setLoading(false);
+          try {
+            quitLoginPage();
+          } catch (e) {
+            console.warn('[Login] 关闭授权页失败:', e);
+          }
+          router.push('/phone');
+          return;
+        }
+        
+        console.error('[Login] 一键登录流程失败:', error);
+        console.error('[Login] 错误详情:', {
+          message: errorMessage,
+          name: (error as Error).name,
+          stack: (error as Error).stack
+        });
+        
+        // 确保关闭授权页
+        try {
+          quitLoginPage();
+        } catch (e) {
+          console.warn('[Login] 关闭授权页失败:', e);
+        }
+        
         setPhoneAuthorized(false);
         // 先显示错误弹窗，1.5秒后再跳转到短信验证页
-        showErrorModal('一键登录失败', '授权失败');
+        showErrorModal(errorMessage, '授权失败');
         setTimeout(() => {
           router.push('/phone');
         }, 1500);
       } finally {
+        console.log('[Login] 清除 loading 状态');
         setLoading(false);
       }
     },
@@ -136,9 +193,13 @@ export default function LoginMain() {
     async function prepareOnepass() {
       // 检测当前环境是否支持阿里云一键登录
       if (!isOnepassAvailable()) {
-        const message = '当前构建未集成阿里云一键登录 SDK';
+        // Release 构建中可能没有集成 SDK，显示提示信息
+        const message = '阿里云一键登录 SDK 不可用，将使用手机号登录';
+        console.log(`[Login] ${message}`);
         setInitError(message);
-        showErrorModal(message, '无法使用一键登录');
+        if (!isUnmounted) {
+          showErrorModal(message, '提示');
+        }
         return;
       }
 
@@ -154,22 +215,15 @@ export default function LoginMain() {
           appSecret: ONEPASS_APP_SECRET,
           timeout: 8000,
         };
-        if (ONEPASS_APP_KEY) {
-          initConfig.appKey = ONEPASS_APP_KEY;
-        }
+        // 不需要 appKey，只需要 appSecret
 
         await initOnepass(initConfig);
 
-        const canVerify = await checkVerifyEnable();
-        if (!canVerify) {
-          const message = '当前网络或运营商暂不支持一键登录';
-          setInitError(message);
-          showErrorModal(message, '无法使用一键登录');
-          return;
-        }
-
+        // 跳过 checkVerifyEnable，直接允许尝试登录
+        // 实际的环境检查会在 preLogin 或 login 时进行
         setOnepassReady(true);
       } catch (error) {
+        console.error('[Login] 一键登录初始化异常:', error);
         if (!isUnmounted) {
           const message = (error as Error).message || '一键登录初始化失败';
           setInitError(message);
@@ -221,7 +275,7 @@ export default function LoginMain() {
         setName(userInfoData.name);
       }
       if (userInfoData.gender !== null && userInfoData.gender !== undefined) {
-        setGender(userInfoData.gender);
+        setGender(userInfoData.gender as GenderType);
       }
       if (userInfoData.birthday) {
         setBirthday(userInfoData.birthday);
@@ -232,13 +286,16 @@ export default function LoginMain() {
       if (userInfoData.background) {
         setBackgroundStory(userInfoData.background);
       }
+      if (userInfoData.isNewUser !== null && userInfoData.isNewUser !== undefined) {
+        setIsNewUser(userInfoData.isNewUser);
+      }
       
       console.log('[Login] 用户信息已更新:', userInfoData);
 
       // 根据 isNewUser 字段判断跳转
-      // isNewUser === 1 表示已完成问卷，跳转到聊天页面
-      // 否则跳转到问卷页面
-      if (userInfoData.isNewUser === 1) {
+      // isNewUser === 0 表示已注册且已填完问卷，跳转到聊天页面
+      // isNewUser === 1 表示新用户（未完成问卷），跳转到问卷页面
+      if (userInfoData.isNewUser === 0) {
           router.replace('/(chat)/chat');
       } else {
         router.replace('/(questionnaire)/name');

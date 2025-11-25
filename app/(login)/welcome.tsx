@@ -26,7 +26,7 @@ export default function Welcome() {
     position: 'absolute' as const,
     bottom: bottom + 184, // 按钮底部94px + 按钮高度约44px + 18px间距 = 156px
     left: '-50%',
-    right: '50%',
+    right: '-50%',
     width: '100%' as const,
   }), [bottom]);
   

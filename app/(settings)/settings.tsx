@@ -47,7 +47,6 @@ export default function Settings() {
         // 后台注销推送token
         // logout(), // 已移除
         // 清除本地数据（已经在内存中，不需要异步操作）
-        Promise.resolve(),
       // ]);
 
       // 清除所有本地store数据
@@ -83,7 +82,7 @@ export default function Settings() {
       <SafeAreaView className="flex-1" edges={['bottom']}>
         {/* 固定区域：用户信息和套餐横幅 */}
         <View className="px-6" style={{ paddingTop: getTopSpacing(44, 20) }}>
-          <UserProfile userName={userName} userGender={userGender} />
+          <UserProfile userName={userName} />
           {/* <PackageBanner /> */}
         </View>
 

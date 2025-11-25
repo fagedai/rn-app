@@ -1,0 +1,22 @@
+﻿澶囦唤鏃堕棿: 2025-11-25 15:38:26
+澶囦唤鐩綍: backup-onepass-20251125-153826
+
+澶囦唤鐨勬枃浠跺垪琛?
+1. Android 鍘熺敓浠ｇ爜:
+   - AliyunOnepassModule.kt
+   - AliyunOnepassPackage.kt
+   - MainApplication.kt
+
+2. Android 閰嶇疆鏂囦欢:
+   - android/build.gradle (闃块噷浜?Maven 浠撳簱閰嶇疆)
+   - android/app/build.gradle (AAR 渚濊禆閰嶇疆)
+   - android/app/proguard-rules.pro (ProGuard 瑙勫垯)
+
+3. AAR 鏂囦欢:
+   - android/app/libs/*.aar
+
+4. TypeScript 浠ｇ爜:
+   - services/onepass/index.ts
+
+鎭㈠鏂规硶:
+杩愯 scripts/restore-onepass.ps1 -BackupDir "backup-onepass-20251125-153826"

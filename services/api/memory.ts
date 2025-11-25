@@ -126,37 +126,25 @@ export async function getMemories(
 
     const responseText = await response.text();
 
-    console.log('[Memory] 响应原始数据:', {
-      status: response.status,
-      statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries()),
-      body: responseText,
-    });
-
     if (response.status === 404) {
       // 没有记忆数据
-      console.log('[Memory] 响应: 404 Not Found');
       return [];
     }
 
     if (!response.ok) {
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        console.log('[Memory] 响应错误: 非 JSON 格式', { status: response.status, body: responseText });
         return [];
       }
-      console.log('[Memory] 响应错误:', { status: response.status, body: responseText });
       throw new Error('获取记忆列表失败');
     }
 
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
-      console.log('[Memory] 响应: 非 JSON 格式', { status: response.status, body: responseText });
       return [];
     }
 
     const data = JSON.parse(responseText);
-    console.log('[Memory] 响应解析后的数据:', JSON.stringify(data, null, 2));
     
     // 检查后端返回的 code 字段（如果存在）
     if (data && typeof data === 'object' && 'code' in data) {
@@ -164,7 +152,6 @@ export async function getMemories(
       // code 为 0 或 200 表示成功，其他值表示错误
       if (code !== 0 && code !== 200) {
         const errorMessage = data.message || '获取记忆列表失败';
-        console.log('[Memory] 响应错误:', { code, message: errorMessage });
         throw new Error(errorMessage);
       }
     }
@@ -182,7 +169,6 @@ export async function getMemories(
       memories = data.data;
     } else {
       // 如果格式不符合预期，返回空数组（可能是成功但没有数据）
-      console.log('[Memory] 响应格式不符合预期，返回空数组:', data);
       memories = [];
     }
     
@@ -193,16 +179,9 @@ export async function getMemories(
       return timeB - timeA;
     });
     
-    console.log('[Memory] 最终返回的记忆列表:', JSON.stringify(sortedMemories, null, 2));
+    console.log('[Memory] 响应:', sortedMemories);
     return sortedMemories;
   } catch (error) {
-    console.log('[Memory] 请求失败:', error);
-    if (error instanceof Error) {
-      console.log('[Memory] 错误详情:', {
-        message: error.message,
-        stack: error.stack,
-      });
-    }
     return [];
   }
 }
@@ -256,7 +235,6 @@ export async function addMemory(request: AddMemoryRequest, token: string): Promi
     if (!response.ok) {
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        console.log('[Memory] 响应:', { status: response.status, body: 'Non-JSON response' });
         await new Promise((resolve) => setTimeout(resolve, 500));
         return {
           id: `memory-${Date.now()}`,
@@ -265,13 +243,12 @@ export async function addMemory(request: AddMemoryRequest, token: string): Promi
           created_at: new Date().toISOString(),
         };
       }
-      console.log('[Memory] 响应:', { status: response.status, body: responseText });
+      console.log('[Memory] 响应:', responseText);
       throw new Error(responseText || '保存失败，请稍后重试');
     }
 
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
-      console.log('[Memory] 响应:', { status: response.status, body: 'Non-JSON response' });
       await new Promise((resolve) => setTimeout(resolve, 500));
       return {
         id: `memory-${Date.now()}`,
@@ -291,7 +268,6 @@ export async function addMemory(request: AddMemoryRequest, token: string): Promi
         error.message.includes('Network request failed') ||
         error.message.includes('Unexpected character')
       ) {
-        console.log('[Memory] 响应失败:', error.message);
         await new Promise((resolve) => setTimeout(resolve, 500));
         return {
           id: `memory-${Date.now()}`,
@@ -352,15 +328,14 @@ export async function updateMemory(id: string, request: UpdateMemoryRequest, pro
     if (!response.ok) {
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        console.log('[Memory] 响应:', { status: response.status, body: 'Non-JSON response' });
         await new Promise((resolve) => setTimeout(resolve, 500));
         return;
       }
-      console.log('[Memory] 响应:', { status: response.status, body: responseText });
+      console.log('[Memory] 响应:', responseText);
       throw new Error(responseText || '保存失败，请稍后重试');
     }
 
-    console.log('[Memory] 响应:', { status: response.status, body: responseText });
+    console.log('[Memory] 响应:', responseText);
   } catch (error) {
     if (error instanceof Error) {
       if (
@@ -368,7 +343,6 @@ export async function updateMemory(id: string, request: UpdateMemoryRequest, pro
         error.message.includes('Network request failed') ||
         error.message.includes('Unexpected character')
       ) {
-        console.log('[Memory] 响应失败:', error.message);
         await new Promise((resolve) => setTimeout(resolve, 500));
         return;
       }
@@ -421,15 +395,14 @@ export async function deleteMemory(id: string, profileId: string, token: string)
     if (!response.ok) {
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        console.log('[Memory] 响应:', { status: response.status, body: 'Non-JSON response' });
         await new Promise((resolve) => setTimeout(resolve, 500));
         return;
       }
-      console.log('[Memory] 响应:', { status: response.status, body: responseText });
+      console.log('[Memory] 响应:', responseText);
       throw new Error(responseText || '删除失败，请稍后重试');
     }
 
-    console.log('[Memory] 响应:', { status: response.status, body: responseText });
+    console.log('[Memory] 响应:', responseText);
   } catch (error) {
     if (error instanceof Error) {
       if (
@@ -437,7 +410,6 @@ export async function deleteMemory(id: string, profileId: string, token: string)
         error.message.includes('Network request failed') ||
         error.message.includes('Unexpected character')
       ) {
-        console.log('[Memory] 响应失败:', error.message);
         await new Promise((resolve) => setTimeout(resolve, 500));
         return;
       }
@@ -489,15 +461,14 @@ export async function deleteMemories(ids: string[], profileId: string, token: st
     if (!response.ok) {
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        console.log('[Memory] 响应:', { status: response.status, body: 'Non-JSON response' });
         await new Promise((resolve) => setTimeout(resolve, 500));
         return;
       }
-      console.log('[Memory] 响应:', { status: response.status, body: responseText });
+      console.log('[Memory] 响应:', responseText);
       throw new Error(responseText || '删除失败，请稍后重试');
     }
 
-    console.log('[Memory] 响应:', { status: response.status, body: responseText });
+    console.log('[Memory] 响应:', responseText);
   } catch (error) {
     if (error instanceof Error) {
       if (
@@ -505,7 +476,6 @@ export async function deleteMemories(ids: string[], profileId: string, token: st
         error.message.includes('Network request failed') ||
         error.message.includes('Unexpected character')
       ) {
-        console.log('[Memory] 响应失败:', error.message);
         await new Promise((resolve) => setTimeout(resolve, 500));
         return;
       }

@@ -73,6 +73,6 @@ export function aiGenderCodeToSymbol(code: 1 | 2 | 3 | null | undefined): string
   }
   if (code === 1) return '♂';
   if (code === 2) return '♀';
-  return ''; // 不愿意透露不显示符号
+  return '保密'; // 不愿意透露显示"保密"
 }
 

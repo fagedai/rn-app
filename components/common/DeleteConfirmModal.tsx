@@ -39,7 +39,7 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
             <View style={styles.content}>
               <Text style={styles.title}>是否要删除此记忆？</Text>
               <Text style={styles.description}>
-                此操作将使机器人忘记与该主题相关的所有信息。
+                此操作将使NEST忘记与该主题相关的所有信息。
               </Text>
               
               <View style={styles.buttonContainer}>

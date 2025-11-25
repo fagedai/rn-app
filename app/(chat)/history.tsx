@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUserStore } from '@/store/userStore';
 import { useCreateStore } from '@/store/createStore';
 import { getHistoryList, HistoryRecord } from '@/services/api/history';
-import { Toast } from '@/components/common/Toast';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import { FullScreenLoading } from '@/components/common/FullScreenLoading';
 
 /**
@@ -53,19 +53,19 @@ type TimeFilter = 'all' | '30days' | '7days';
 export default function HistoryScreen() {
   const router = useRouter();
   const { userInfo } = useUserStore();
-  const { aiName } = useCreateStore();
+  const { nestName } = useCreateStore();
 
   const [allRecords, setAllRecords] = useState<HistoryRecord[]>([]); // 所有记录
   const [filteredRecords, setFilteredRecords] = useState<HistoryRecord[]>([]); // 筛选后的记录
   const [selectedFilter, setSelectedFilter] = useState<TimeFilter>('30days'); // 默认选择30天内
   const [loading, setLoading] = useState(false);
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
 
-  // 显示Toast
-  const showToast = useCallback((message: string) => {
-    setToastMessage(message);
-    setToastVisible(true);
+  // 显示ErrorModal
+  const showErrorModal = useCallback((message: string) => {
+    setErrorModalMessage(message);
+    setErrorModalVisible(true);
   }, []);
 
   // 根据时间筛选记录
@@ -94,7 +94,7 @@ export default function HistoryScreen() {
   const loadHistory = useCallback(
     async () => {
       if (!userInfo.token) {
-        showToast('用户未登录，请重新登录');
+        showErrorModal('用户未登录，请重新登录');
         return;
       }
 
@@ -107,13 +107,13 @@ export default function HistoryScreen() {
         setAllRecords(loadedRecords);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : '加载失败，请重试';
-        showToast(errorMessage);
+        showErrorModal(errorMessage);
         // 失败时不清空列表，保留已有内容
       } finally {
         setLoading(false);
       }
     },
-    [userInfo.token, showToast]
+    [userInfo.token, showErrorModal]
   );
 
   // 初始化加载
@@ -170,7 +170,7 @@ export default function HistoryScreen() {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyText}>
-          暂无历史记录，去和{aiName || 'NEST'}聊聊吧
+          暂无历史记录，去和{nestName || 'NEST'}聊聊吧
         </Text>
       </View>
     );
@@ -246,11 +246,11 @@ export default function HistoryScreen() {
           )}
         </SafeAreaView>
 
-        {/* Toast */}
-        <Toast
-          visible={toastVisible}
-          message={toastMessage}
-          onHide={() => setToastVisible(false)}
+        {/* ErrorModal */}
+        <ErrorModal
+          visible={errorModalVisible}
+          message={errorModalMessage}
+          onClose={() => setErrorModalVisible(false)}
         />
       </ImageBackground>
     </>

@@ -5,7 +5,7 @@ import { GlassContainer } from '@/components/common/GlassContainer';
 import { useRouter } from 'expo-router';
 import { LoginHeader } from '@/components/common/LoginHeader';
 import { PhoneInput } from '@/components/login/PhoneInput';
-import { useUserStore } from '@/store/userStore';
+import { useUserStore, GenderType } from '@/store/userStore';
 import { useAgreementStore } from '@/store/agreementStore';
 import { useCreateStore } from '@/store/createStore';
 import { TermsModal } from '@/components/common/TermsModal';
@@ -16,7 +16,7 @@ import { useSafeArea } from '@/hooks/useSafeArea';
 
 export default function LoginPhone() {
   const router = useRouter();
-  const { userInfo, setPhone, setCode, setToken, setUserId, setName, setGender, setBirthday, setInterests, setBackgroundStory } = useUserStore();
+  const { userInfo, setPhone, setCode, setToken, setUserId, setName, setGender, setBirthday, setInterests, setBackgroundStory, setIsNewUser } = useUserStore();
   const { agreed, toggleAgreed } = useAgreementStore();
   const { top, bottom } = useSafeArea();
   // 使用本地状态管理输入值，避免频繁触发 store 更新导致重新渲染
@@ -170,7 +170,7 @@ export default function LoginPhone() {
             setName(userInfoData.name);
           }
           if (userInfoData.gender !== null && userInfoData.gender !== undefined) {
-            setGender(userInfoData.gender);
+            setGender(userInfoData.gender as GenderType);
           }
           if (userInfoData.birthday) {
             setBirthday(userInfoData.birthday);
@@ -181,13 +181,16 @@ export default function LoginPhone() {
           if (userInfoData.background) {
             setBackgroundStory(userInfoData.background);
           }
+          if (userInfoData.isNewUser !== null && userInfoData.isNewUser !== undefined) {
+            setIsNewUser(userInfoData.isNewUser);
+          }
           
           console.log('[Phone] 用户信息已更新:', userInfoData);
           
           // 根据 isNewUser 字段判断跳转
-          // isNewUser === 1 表示已完成问卷，跳转到聊天页面
-          // 否则跳转到问卷页面
-          if (userInfoData.isNewUser === 1) {
+          // isNewUser === 0 表示已注册且已填完问卷，跳转到聊天页面
+          // isNewUser === 1 表示新用户（未完成问卷），跳转到问卷页面
+          if (userInfoData.isNewUser === 0) {
               router.replace('/(chat)/chat');
           } else {
             router.replace('/(questionnaire)/name');

@@ -42,7 +42,7 @@ export const CloseConfirmModal: React.FC<CloseConfirmModalProps> = ({
                 {/* 文本分成两层 */}
                 <View style={styles.textContainer}>
                   <Text style={styles.textLine1}>删除这条记忆？</Text>
-                  <Text style={styles.textLine2}>此操作将使机器人忘记与该主题相关的所有信息。</Text>
+                  <Text style={styles.textLine2}>此操作将使NEST忘记与该主题相关的所有信息。</Text>
                 </View>
                 
                 {/* 按钮容器 */}

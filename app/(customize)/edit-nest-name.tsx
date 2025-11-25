@@ -4,23 +4,24 @@ import { useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCreateStore } from '@/store/createStore';
-import { saveAiName } from '@/services/api/aiSettings';
-import { Toast } from '@/components/common/Toast';
+import { useUserStore } from '@/store/userStore';
+import { savenestName } from '@/services/api/aiSettings';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import { SingleNavButton } from '@/components/common/SingleNavButton';
-import { useToast } from '@/hooks/useToast';
+import { useErrorModal } from '@/hooks/useErrorModal';
 
-export default function EditAiName() {
+export default function EditnestName() {
   const router = useRouter();
-  const { aiName, setAiName } = useCreateStore();
+  const { nestName, setnestName } = useCreateStore();
   const { userInfo } = useUserStore();
-  const [name, setName] = useState(aiName || '');
+  const [name, setName] = useState(nestName || '');
   const [loading, setLoading] = useState(false);
-  const toast = useToast(2000);
+  const errorModal = useErrorModal();
   const inputRef = useRef<TextInput>(null);
   const [hasUserCleared, setHasUserCleared] = useState(false);
 
   // 验证AI名字：仅支持英文字母，长度1-8
-  const validateAiName = (name: string): { valid: boolean; error?: string } => {
+  const validatenestName = (name: string): { valid: boolean; error?: string } => {
     if (!name || name.trim().length === 0) {
       return { valid: false, error: '非法用户名，请重试' };
     }
@@ -65,16 +66,16 @@ export default function EditAiName() {
       return;
     }
 
-    const validation = validateAiName(name);
+    const validation = validatenestName(name);
     if (!validation.valid) {
-      toast.show(validation.error || '非法用户名，请重试');
+      errorModal.show(validation.error || '非法用户名，请重试');
       return;
     }
 
     const trimmedName = name.trim();
     
     // 如果名字没有变化，直接返回
-    if (trimmedName === aiName) {
+    if (trimmedName === nestName) {
       router.back();
       return;
     }
@@ -83,23 +84,23 @@ export default function EditAiName() {
       setLoading(true);
       
       // 调用后端API保存AI名字（至少1秒防抖）
-      if (!userInfo.token) {
+      if (!userInfo.token || !userInfo.userId) {
         throw new Error('请先登录');
       }
-      const savePromise = saveAiName(trimmedName, userInfo.token);
+      const savePromise = savenestName(trimmedName, userInfo.userId, userInfo.token);
       const minDelayPromise = new Promise(resolve => setTimeout(resolve, 1000));
       
       await Promise.all([savePromise, minDelayPromise]);
       
       // 更新本地store
-      setAiName(trimmedName);
+      setnestName(trimmedName);
       
       // 成功，直接返回，不显示Toast
       router.back();
     } catch (error) {
       console.error('保存AI名字失败:', error);
       const errorMessage = error instanceof Error ? error.message : '保存失败，请稍后再试';
-      toast.show(errorMessage);
+      errorModal.show(errorMessage);
       setLoading(false);
     }
   };
@@ -116,7 +117,7 @@ export default function EditAiName() {
         options={{
           headerShown: true,
           headerTransparent: true,
-          headerTitle: '修改机器人名字',
+          headerTitle: '修改NEST名字',
           headerTitleStyle: { color: '#fff', fontSize: 16 },
           headerTitleAlign: 'center',
           headerBackVisible: false,
@@ -136,12 +137,12 @@ export default function EditAiName() {
         <View className="flex-1 justify-center px-6">
           {/* 提示文案 */}
           <Text style={styles.hintText}>
-            修改名字后，机器人会以新名字与您交流
+            修改名字后，NEST会以新名字与您交流
           </Text>
 
           {/* 输入框标签 */}
           <Text style={styles.labelText}>
-            机器人名字（仅支持英文字母，最多8位）
+            NEST名字（仅支持英文字母，最多8位）
           </Text>
 
           {/* 输入框 */}
@@ -182,7 +183,7 @@ export default function EditAiName() {
                       pointerEvents: 'none',
                     }}
                   >
-                    {aiName || '请输入机器人名字'}
+                    {nestName || '请输入NEST名字'}
                   </Text>
                 )}
                 <TextInput
@@ -196,7 +197,7 @@ export default function EditAiName() {
                   }}
                   value={name}
                   onChangeText={handleTextChange}
-                  placeholder={aiName || '请输入机器人名字'}
+                  placeholder={nestName || '请输入NEST名字'}
                   placeholderTextColor="#D9D8E9"
                   selectionColor="#9EA9FF"
                   autoCorrect={false}
@@ -263,11 +264,11 @@ export default function EditAiName() {
           </View>
         </View>
       </SafeAreaView>
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        duration={toast.duration}
-        onHide={toast.hide}
+      <ErrorModal
+        visible={errorModal.visible}
+        message={errorModal.error}
+        title={errorModal.title || '操作失败'}
+        onClose={errorModal.hide}
       />
     </ImageBackground>
   );

@@ -8,8 +8,8 @@ import { SingleNavButton } from '@/components/common/SingleNavButton';
 import { useUserStore, GenderType } from '@/store/userStore';
 import { updateUserInfo } from '@/services/api/user';
 import { getAllGenderTexts, genderTextToCode, genderCodeToText } from '@/utils/genderUtils';
-import { Toast } from '@/components/common/Toast';
-import { useToast } from '@/hooks/useToast';
+import { ErrorModal } from '@/components/common/ErrorModal';
+import { useErrorModal } from '@/hooks/useErrorModal';
 
 export default function EditGender() {
   const router = useRouter();
@@ -27,7 +27,7 @@ export default function EditGender() {
   // 本地状态管理选中的性别文本（用于 UI）
   const [selectedGenderText, setSelectedGenderText] = useState<string>(initialGenderText);
   const [loading, setLoading] = useState(false);
-  const toast = useToast(2000);
+  const errorModal = useErrorModal();
 
   // 处理性别变化（用户滑动时调用，接收文本）
   const handleGenderChange = (genderText: string) => {
@@ -64,7 +64,7 @@ export default function EditGender() {
       setGender(genderCode);
       
       // 显示成功提示
-      toast.show('已保存');
+      errorModal.show('已保存', '保存成功');
       
       // 延迟返回，让用户看到成功提示
       setTimeout(() => {
@@ -74,7 +74,7 @@ export default function EditGender() {
       console.error('修改性别失败:', error);
       // 显示失败提示
       const errorMessage = error instanceof Error ? error.message : '保存失败，请稍后再试';
-      toast.show(errorMessage);
+      errorModal.show(errorMessage);
       // 失败时留在本页，保持用户选择
     } finally {
       setLoading(false);
@@ -127,11 +127,11 @@ export default function EditGender() {
           />
         </View>
       </SafeAreaView>
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        duration={toast.duration}
-        onHide={toast.hide}
+      <ErrorModal
+        visible={errorModal.visible}
+        message={errorModal.error}
+        title={errorModal.title || '操作失败'}
+        onClose={errorModal.hide}
       />
     </ImageBackground>
   );

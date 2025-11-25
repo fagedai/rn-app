@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { GlassContainer } from '@/components/common/GlassContainer';
 import { MemoryCategory, addMemory } from '@/services/api/memory';
 import { CloseConfirmModal } from '@/components/common/CloseConfirmModal';
-import { Toast } from '@/components/common/Toast';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import { useCreateStore } from '@/store/createStore';
 import { useUserStore } from '@/store/userStore';
 import { useSafeArea } from '@/hooks/useSafeArea';
@@ -27,7 +27,7 @@ const MAX_LENGTH = 200;
 export default function MemoryAddScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ category?: MemoryCategory }>();
-  const { aiName } = useCreateStore();
+  const { nestName } = useCreateStore();
   const { userInfo } = useUserStore();
   const [category, setCategory] = useState<MemoryCategory>(
     (params.category as MemoryCategory) || '人际关系'
@@ -36,8 +36,8 @@ export default function MemoryAddScreen() {
   const [charCount, setCharCount] = useState(0);
   const [saving, setSaving] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const { bottom } = useSafeArea();
   
@@ -109,12 +109,12 @@ export default function MemoryAddScreen() {
     }
 
     if (!userInfo.profileId) {
-      showToast('请先完成问卷');
+      showErrorModal('请先完成问卷');
       return;
     }
 
     if (!userInfo.token) {
-      showToast('请先登录');
+      showErrorModal('请先登录');
       return;
     }
 
@@ -126,11 +126,15 @@ export default function MemoryAddScreen() {
         content: trimmedText,
       }, userInfo.token);
       
+      // 记录最后创建的记忆内容
+      const { setLastCreatedMemory } = useCreateStore.getState();
+      setLastCreatedMemory(trimmedText);
+      
       // 成功后返回列表页
       router.back();
     } catch (error) {
       console.error('保存失败:', error);
-      showToast('保存失败，请重试');
+      showErrorModal('保存失败，请重试');
     } finally {
       setSaving(false);
     }
@@ -149,9 +153,9 @@ export default function MemoryAddScreen() {
     router.back();
   };
 
-  const showToast = (message: string) => {
-    setToastMessage(message);
-    setToastVisible(true);
+  const showErrorModal = (message: string) => {
+    setErrorModalMessage(message);
+    setErrorModalVisible(true);
   };
 
   return (
@@ -240,7 +244,7 @@ export default function MemoryAddScreen() {
                       setText(value);
                     }
                   }}
-                  placeholder={`定制${aiName}的记忆，例如，${aiName}曾和你一起...`}
+                  placeholder={`定制${nestName}的记忆，例如，${nestName}曾和你一起...`}
                   placeholderTextColor="rgba(255, 255, 255, 0.5)"
                   multiline
                   maxLength={MAX_LENGTH}
@@ -287,11 +291,11 @@ export default function MemoryAddScreen() {
         }}
       />
 
-      {/* Toast */}
-      <Toast
-        visible={toastVisible}
-        message={toastMessage}
-        onHide={() => setToastVisible(false)}
+      {/* ErrorModal */}
+      <ErrorModal
+        visible={errorModalVisible}
+        message={errorModalMessage}
+        onClose={() => setErrorModalVisible(false)}
       />
     </ImageBackground>
   );

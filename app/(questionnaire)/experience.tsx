@@ -81,7 +81,7 @@ export default function Q7ExperienceSelection() {
     setQ7Experience(selectedExperience);
     
     // 进入ai-role-type界面
-    router.push('/(questionnaire)/ai-role-type');
+    router.push('/(questionnaire)/nest-role-type');
   };
 
   const handleBack = () => {

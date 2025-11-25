@@ -2,7 +2,7 @@
  * 聊天API模拟服务（用于开发测试，无后端时使用）
  */
 
-import { SendMessagePayload, GetMessagesResponse } from './chat';
+import { SendMessagePayload, SendMessageResponse } from './chat';
 import { generateUUID } from '@/utils/uuid';
 
 // 模拟延迟
@@ -49,7 +49,7 @@ export async function sendMessageStreamMock(
       mockConversationId = `conv-${generateUUID()}`;
     }
 
-    // 生成机器人回复
+    // 生成NEST回复
     const responseText = mockResponses[Math.floor(Math.random() * mockResponses.length)] || '我明白了。';
 
     // 模拟流式输出（逐字显示）
@@ -66,6 +66,22 @@ export async function sendMessageStreamMock(
   } catch (error) {
     onError(error instanceof Error ? error : new Error('模拟发送失败'));
   }
+}
+
+/**
+ * 模拟获取历史消息的响应类型
+ */
+interface GetMessagesResponse {
+  messages: Array<{
+    message_id: string;
+    role: 'user' | 'assistant';
+    content: string;
+    created_at: string;
+    server_ts: number;
+  }>;
+  has_more: boolean;
+  page: number;
+  page_size: number;
 }
 
 /**

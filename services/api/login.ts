@@ -74,13 +74,13 @@ export async function exchangeOnePassToken(token: string): Promise<ExchangeToken
     try {
       responseData = JSON.parse(responseText) as ApiResponse<VerifyResponseData>;
     } catch {
-      console.log('[Login] 响应:', { status: response.status, body: responseText });
+      console.log('[Login] 响应:', responseText);
       throw new Error('接口返回格式错误，无法解析JSON');
     }
 
     // 检查后端返回的状态码（即使HTTP状态码是200，后端也可能返回错误code）
     if (responseData.code !== 200) {
-      console.log('[Login] 响应:', { status: response.status, body: responseText, code: responseData.code });
+      console.log('[Login] 响应:', responseText);
       const errorMessage = responseData.message || '一键登录接口请求失败';
       throw new Error(errorMessage);
     }
@@ -153,11 +153,11 @@ export async function sendVerificationCode(phone: string): Promise<void> {
     const responseText = await response.text();
 
     if (!response.ok) {
-      console.log('[Login] 响应:', { status: response.status, body: responseText });
+      console.log('[Login] 响应:', responseText);
       throw new Error(responseText || '验证码发送失败，请稍后重试');
     }
 
-    console.log('[Login] 响应:', { status: response.status, body: responseText });
+    console.log('[Login] 响应:', responseText);
   } catch (error) {
     if (error instanceof Error) {
       // 网络错误处理
@@ -217,7 +217,7 @@ export async function verifyVerificationCode(phone: string, code: string): Promi
     try {
       responseData = JSON.parse(responseText) as ApiResponse<VerifyResponseData>;
     } catch {
-      console.log('[Login] 响应:', { status: response.status, body: responseText });
+      console.log('[Login] 响应:', responseText);
       throw new Error('接口返回格式错误，无法解析JSON');
     }
 

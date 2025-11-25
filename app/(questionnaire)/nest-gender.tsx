@@ -106,7 +106,7 @@ export default function Q5NestGenderSelection() {
     setQ5NestGender(genderToSubmit);
     
     // 进入ai-expectation界面
-    router.push('/(questionnaire)/ai-expectation');
+    router.push('/(questionnaire)/nest-expectation');
   };
 
   const handleBack = () => {

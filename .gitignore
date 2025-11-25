@@ -3,6 +3,9 @@ node_modules/
 dist/
 npm-debug.*
 *.jks
+*.keystore
+!debug.keystore
+keystore.properties
 *.p8
 *.p12
 *.key

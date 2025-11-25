@@ -48,16 +48,8 @@ export default function Q4RoleSelection() {
     // 保存到问卷store
     setQ4Role(selectedRole!);
 
-    // 设置默认NEST性别为女 (2)
-    const { setQ5NestGender } = useQuestionnaireStore.getState();
-    setQ5NestGender(2); // 默认女
-    
-    // 同时设置createStore中的aiGender为女 (2，因为createStore使用1=男, 2=女, 3=不愿意透露)
-    const { setAiGender } = useCreateStore.getState();
-    setAiGender(2); // 默认女（编码2）
-
-    // 跳过NEST性别选择页面，直接进入AI期望选择页面
-    router.push('/(questionnaire)/ai-expectation');
+    // 进入NEST性别选择页面
+    router.push('/(questionnaire)/nest-gender');
   };
 
   const handleBack = () => {
@@ -79,7 +71,7 @@ export default function Q4RoleSelection() {
       <QuestionnaireLayout
         header={
           <QuestionnaireProgressTitle
-            title="你希望你的AI机器人成为你的什么?"
+            title="你希望你的AINEST成为你的什么?"
             progress={progress}
             showProgressBar={true}
           />

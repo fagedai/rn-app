@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { GlassContainer } from '@/components/common/GlassContainer';
 import { MemoryCategory, MemoryItem, getMemories, updateMemory, deleteMemory } from '@/services/api/memory';
 import { CloseConfirmModal } from '@/components/common/CloseConfirmModal';
-import { Toast } from '@/components/common/Toast';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import { useUserStore } from '@/store/userStore';
 import { useSafeArea } from '@/hooks/useSafeArea';
 
@@ -34,8 +34,8 @@ export default function MemoryEditScreen() {
   const [saving, setSaving] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [currentCategory, setCurrentCategory] = useState<MemoryCategory>('人际关系');
   const { bottom } = useSafeArea();
@@ -102,7 +102,7 @@ export default function MemoryEditScreen() {
       }
 
       if (!userInfo.profileId) {
-        showToast('请先完成问卷');
+        showErrorModal('请先完成问卷');
         setTimeout(() => router.back(), 1500);
         return;
       }
@@ -110,7 +110,7 @@ export default function MemoryEditScreen() {
       setLoading(true);
       try {
         if (!userInfo.token) {
-          showToast('请先登录');
+          showErrorModal('请先登录');
           setLoading(false);
           return;
         }
@@ -131,12 +131,12 @@ export default function MemoryEditScreen() {
         }
 
         if (!found) {
-          showToast('记忆不存在');
+          showErrorModal('记忆不存在');
           setTimeout(() => router.back(), 1500);
         }
       } catch (error) {
         console.error('加载记忆失败:', error);
-        showToast('加载失败，请重试');
+        showErrorModal('加载失败，请重试');
       } finally {
         setLoading(false);
       }
@@ -164,12 +164,12 @@ export default function MemoryEditScreen() {
     }
 
     if (!userInfo.profileId) {
-      showToast('请先完成问卷');
+      showErrorModal('请先完成问卷');
       return;
     }
 
     if (!userInfo.token) {
-      showToast('请先登录');
+      showErrorModal('请先登录');
       return;
     }
 
@@ -181,6 +181,10 @@ export default function MemoryEditScreen() {
         content: trimmedText,
       }, userInfo.profileId, userInfo.token);
       
+      // 记录最后编辑的记忆内容
+      const { setLastCreatedMemory } = useCreateStore.getState();
+      setLastCreatedMemory(trimmedText);
+      
       // 成功后返回记忆功能界面 → 立即调用get接口获得当前分类的记忆文本
       router.push({
         pathname: '/(customize)/memory',
@@ -189,7 +193,7 @@ export default function MemoryEditScreen() {
     } catch (error) {
       console.error('保存失败:', error);
       // 修改失败 → Toast"保存失败，请重试"，停留并保留已改内容
-      showToast('保存失败，请重试');
+      showErrorModal('保存失败，请重试');
     } finally {
       setSaving(false);
     }
@@ -198,12 +202,12 @@ export default function MemoryEditScreen() {
   const handleDelete = async () => {
     if (!memory) return;
     if (!userInfo.profileId) {
-      showToast('请先完成问卷');
+      showErrorModal('请先完成问卷');
       return;
     }
 
     if (!userInfo.token) {
-      showToast('请先登录');
+      showErrorModal('请先登录');
       return;
     }
 
@@ -217,7 +221,7 @@ export default function MemoryEditScreen() {
       });
     } catch (error) {
       console.error('删除失败:', error);
-      showToast('删除失败，请重试');
+      showErrorModal('删除失败，请重试');
     }
   };
 
@@ -240,9 +244,9 @@ export default function MemoryEditScreen() {
     router.back();
   };
 
-  const showToast = (message: string) => {
-    setToastMessage(message);
-    setToastVisible(true);
+  const showErrorModal = (message: string) => {
+    setErrorModalMessage(message);
+    setErrorModalVisible(true);
   };
 
   if (loading) {
@@ -417,11 +421,11 @@ export default function MemoryEditScreen() {
         onDelete={handleDelete}
       />
 
-      {/* Toast */}
-      <Toast
-        visible={toastVisible}
-        message={toastMessage}
-        onHide={() => setToastVisible(false)}
+      {/* ErrorModal */}
+      <ErrorModal
+        visible={errorModalVisible}
+        message={errorModalMessage}
+        onClose={() => setErrorModalVisible(false)}
       />
     </ImageBackground>
   );

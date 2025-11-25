@@ -89,10 +89,9 @@ export async function getUserInfo(token: string): Promise<UserInfoResponse> {
     } catch {
       // 如果不是 JSON 格式，检查 HTTP 状态码
       if (!response.ok) {
-        console.log('[User] 响应:', { status: response.status, body: responseText });
+        console.log('[User] 响应:', responseText);
         throw new Error(responseText || '获取用户信息失败');
       }
-      console.log('[User] 响应: 非JSON格式', { status: response.status, body: responseText });
       throw new Error('获取用户信息失败：响应格式错误');
     }
 
@@ -102,7 +101,6 @@ export async function getUserInfo(token: string): Promise<UserInfoResponse> {
       const isSuccess = responseData.code === 0 || responseData.code === 200;
       if (!isSuccess) {
         const errorMessage = responseData.message || responseText || '获取用户信息失败';
-        console.log('[User] 响应错误:', { status: response.status, body: responseText, code: responseData.code });
         throw new Error(errorMessage);
       }
 
@@ -123,7 +121,7 @@ export async function getUserInfo(token: string): Promise<UserInfoResponse> {
               };
             }
           } catch (e) {
-            console.warn('[User] 解析生日失败:', backendData.birthday, e);
+            // 静默处理生日解析失败
           }
         }
 
@@ -147,7 +145,6 @@ export async function getUserInfo(token: string): Promise<UserInfoResponse> {
     }
 
     // 默认返回错误
-    console.log('[User] 响应: 格式不符合预期', responseData);
     throw new Error('获取用户信息失败：响应格式错误');
   } catch (error) {
     if (error instanceof Error) {
@@ -161,7 +158,6 @@ export async function getUserInfo(token: string): Promise<UserInfoResponse> {
         throw new Error('网络连接失败，请检查网络设置后重试');
       }
     }
-    console.log('[User] 响应失败:', error);
     throw error;
   }
 }
@@ -205,10 +201,9 @@ export async function updateUserInfo(
     } catch {
       // 如果不是 JSON 格式，检查 HTTP 状态码
       if (!response.ok) {
-        console.log('[User] 响应:', { status: response.status, body: responseText });
+        console.log('[User] 响应:', responseText);
         throw new Error(responseText || '更新用户信息失败');
       }
-      console.log('[User] 响应: 非JSON格式', { status: response.status, body: responseText });
       // 如果 HTTP 状态码是成功的，即使不是 JSON 也认为成功
       return;
     }
@@ -219,22 +214,20 @@ export async function updateUserInfo(
       const isSuccess = responseData.code === 0 || responseData.code === 200;
       if (!isSuccess) {
         const errorMessage = responseData.message || responseText || '更新用户信息失败';
-        console.log('[User] 响应错误:', { status: response.status, body: responseText, code: responseData.code });
         throw new Error(errorMessage);
       }
 
-      console.log('[User] 响应: 更新成功');
+      console.log('[User] 响应:', responseData);
       return;
     }
 
     // 如果 HTTP 状态码是成功的，即使没有 code 字段也认为成功
     if (response.ok) {
-      console.log('[User] 响应: 更新成功（HTTP状态码成功）');
+      console.log('[User] 响应:', responseText);
       return;
     }
 
     // 默认返回错误
-    console.log('[User] 响应: 格式不符合预期', responseData);
     throw new Error('更新用户信息失败：响应格式错误');
   } catch (error) {
     if (error instanceof Error) {
@@ -248,7 +241,6 @@ export async function updateUserInfo(
         throw new Error('网络连接失败，请检查网络设置后重试');
       }
     }
-    console.log('[User] 响应失败:', error);
     throw error;
   }
 }
@@ -287,10 +279,9 @@ export async function sendChangePhoneCode(mobile: string, token: string): Promis
     } catch {
       // 如果不是 JSON 格式，检查 HTTP 状态码
       if (!response.ok) {
-        console.log('[User] 响应:', { status: response.status, body: responseText });
+        console.log('[User] 响应:', responseText);
         throw new Error(responseText || '发送验证码失败');
       }
-      console.log('[User] 响应: 非JSON格式', { status: response.status, body: responseText });
       // 如果 HTTP 状态码是成功的，即使不是 JSON 也认为成功
       return;
     }
@@ -301,22 +292,20 @@ export async function sendChangePhoneCode(mobile: string, token: string): Promis
       const isSuccess = responseData.code === 0 || responseData.code === 200;
       if (!isSuccess) {
         const errorMessage = responseData.message || responseText || '发送验证码失败';
-        console.log('[User] 响应错误:', { status: response.status, body: responseText, code: responseData.code });
         throw new Error(errorMessage);
       }
 
-      console.log('[User] 响应: 验证码发送成功');
+      console.log('[User] 响应:', responseData);
       return;
     }
 
     // 如果 HTTP 状态码是成功的，即使没有 code 字段也认为成功
     if (response.ok) {
-      console.log('[User] 响应: 验证码发送成功（HTTP状态码成功）');
+      console.log('[User] 响应:', responseText);
       return;
     }
 
     // 默认返回错误
-    console.log('[User] 响应: 格式不符合预期', responseData);
     throw new Error('发送验证码失败：响应格式错误');
   } catch (error) {
     if (error instanceof Error) {
@@ -330,7 +319,6 @@ export async function sendChangePhoneCode(mobile: string, token: string): Promis
         throw new Error('网络连接失败，请检查网络设置后重试');
       }
     }
-    console.log('[User] 响应失败:', error);
     throw error;
   }
 }
@@ -374,10 +362,9 @@ export async function confirmChangePhone(mobile: string, token: string, code?: s
     } catch {
       // 如果不是 JSON 格式，检查 HTTP 状态码
       if (!response.ok) {
-        console.log('[User] 响应:', { status: response.status, body: responseText });
+        console.log('[User] 响应:', responseText);
         throw new Error(responseText || '修改手机号失败');
       }
-      console.log('[User] 响应: 非JSON格式', { status: response.status, body: responseText });
       // 如果 HTTP 状态码是成功的，即使不是 JSON 也认为成功
       return;
     }
@@ -388,22 +375,20 @@ export async function confirmChangePhone(mobile: string, token: string, code?: s
       const isSuccess = responseData.code === 0 || responseData.code === 200;
       if (!isSuccess) {
         const errorMessage = responseData.message || responseText || '修改手机号失败';
-        console.log('[User] 响应错误:', { status: response.status, body: responseText, code: responseData.code });
         throw new Error(errorMessage);
       }
 
-      console.log('[User] 响应: 手机号修改成功');
+      console.log('[User] 响应:', responseData);
       return;
     }
 
     // 如果 HTTP 状态码是成功的，即使没有 code 字段也认为成功
     if (response.ok) {
-      console.log('[User] 响应: 手机号修改成功（HTTP状态码成功）');
+      console.log('[User] 响应:', responseText);
       return;
     }
 
     // 默认返回错误
-    console.log('[User] 响应: 格式不符合预期', responseData);
     throw new Error('修改手机号失败：响应格式错误');
   } catch (error) {
     if (error instanceof Error) {
@@ -417,7 +402,6 @@ export async function confirmChangePhone(mobile: string, token: string, code?: s
         throw new Error('网络连接失败，请检查网络设置后重试');
       }
     }
-    console.log('[User] 响应失败:', error);
     throw error;
   }
 }

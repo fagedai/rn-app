@@ -8,9 +8,7 @@ import { DatePickerColumn } from '@/components/login/DatePickerColumn';
 import { SingleNavButton } from '@/components/common/SingleNavButton';
 import { useUserStore } from '@/store/userStore';
 import { updateUserInfo } from '@/services/api/user';
-import { Toast } from '@/components/common/Toast';
 import { ErrorModal } from '@/components/common/ErrorModal';
-import { useToast } from '@/hooks/useToast';
 import { useErrorModal } from '@/hooks/useErrorModal';
 import { isLeapYear, getDaysInMonth, formatBirthday } from '@/utils/dateUtils';
 
@@ -20,7 +18,6 @@ const TITLE_HEIGHT = 32; // 标题高度：16px字体（约24px行高） + 8px m
 export default function EditBirthday() {
   const router = useRouter();
   const { userInfo, setBirthday } = useUserStore();
-  const toast = useToast(2000);
   const errorModal = useErrorModal();
   
   // 获取当前日期
@@ -203,7 +200,7 @@ export default function EditBirthday() {
       setBirthday(dateToSubmit);
       
       // 显示成功提示
-      toast.show('修改成功');
+      errorModal.show('修改成功', '修改成功');
       
       // 延迟返回，让用户看到成功提示
       setTimeout(() => {
@@ -327,13 +324,8 @@ export default function EditBirthday() {
       <ErrorModal
         visible={errorModal.visible}
         message={errorModal.error}
+        title={errorModal.title || '操作失败'}
         onClose={errorModal.hide}
-      />
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        duration={toast.duration}
-        onHide={toast.hide}
       />
     </ImageBackground>
   );

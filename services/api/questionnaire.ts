@@ -59,24 +59,22 @@ export async function submitQuestionnaire(
       responseData = JSON.parse(responseText);
     } catch {
       // 如果不是 JSON 格式，检查 HTTP 状态码
-  if (!response.ok) {
-        console.log('[Questionnaire] 响应:', { status: response.status, body: responseText });
+      if (!response.ok) {
+        console.log('[Questionnaire] 响应:', responseText);
         throw new Error(responseText || '问卷提交失败，请稍后重试');
       }
-      console.log('[Questionnaire] 响应:', { status: response.status, body: responseText });
-      return;
+      throw new Error('问卷提交失败：响应格式错误');
     }
 
     // 检查后端返回的 code 字段（即使 HTTP 状态码是 200，后端也可能返回错误 code）
     if (!responseData || responseData.code !== 200) {
       const errorMessage = responseData?.message || responseText || '问卷提交失败，请稍后重试';
-      console.log('[Questionnaire] 响应:', { status: response.status, body: responseText, code: responseData?.code });
       throw new Error(errorMessage);
     }
 
     // 提取 profileId（从 data 字段中）
     const profileId = typeof responseData.data === 'string' ? responseData.data : String(responseData.data || '');
-    console.log('[Questionnaire] 响应:', { status: response.status, body: responseText, code: responseData.code, profileId });
+    console.log('[Questionnaire] 响应:', responseData);
     
     if (!profileId) {
       throw new Error('未获取到 profileId，请稍后重试');

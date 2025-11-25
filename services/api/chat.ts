@@ -86,36 +86,20 @@ export async function sendMessageStream(
 
     if (!response.ok) {
       const text = await response.text();
-      console.log('[Chat] 响应:', { status: response.status, body: text });
+      console.log('[Chat] 响应:', text);
       throw new Error(text || '发送消息失败，请稍后重试');
     }
 
-    // 检查响应类型和响应体
-    const contentType = response.headers.get('content-type') || '';
-    const isStreaming = contentType.includes('text/event-stream') || contentType.includes('text/plain');
-    
-    console.log('[Chat] 响应:', { 
-      status: response.status, 
-      contentType,
-      hasBody: !!response.body,
-      isStreaming,
-    });
-
     // 如果响应体为空，尝试读取文本响应（可能是非流式响应）
     if (!response.body) {
-      console.log('[Chat] 响应体为空，尝试读取文本响应');
       try {
-        // 克隆响应以便读取文本（如果支持）
-        // 注意：在 React Native 中，response.clone() 可能不可用
-        // 所以直接尝试读取文本
         const text = await response.text();
-        console.log('[Chat] 文本响应:', text);
         
         if (text && text.trim()) {
           // 尝试解析为 JSON
           try {
             const responseData = JSON.parse(text);
-            console.log('[Chat] 响应 (JSON):', responseData);
+            console.log('[Chat] 响应:', responseData);
             
             // 检查响应 code 是否为 200
             if (responseData.code !== 200) {
@@ -140,7 +124,6 @@ export async function sendMessageStream(
             return;
           } catch (e) {
             // 不是 JSON，直接作为文本发送
-            console.log('[Chat] 非 JSON 响应，作为文本处理');
             for (let i = 0; i < text.length; i++) {
               onChunk(text[i]);
               await new Promise(resolve => setTimeout(resolve, 10));
@@ -149,11 +132,9 @@ export async function sendMessageStream(
             return;
           }
         } else {
-          console.log('[Chat] 响应文本为空');
           throw new Error('响应体为空');
         }
       } catch (e) {
-        console.log('[Chat] 读取文本响应失败:', e);
         if (e instanceof Error && e.message.includes('响应体为空')) {
           throw e;
         }
@@ -170,7 +151,6 @@ export async function sendMessageStream(
       const { done, value } = await reader.read();
 
       if (done) {
-        console.log('[Chat] 流式响应完成:', { conversationId });
         onComplete(conversationId);
         break;
       }
@@ -245,7 +225,7 @@ export async function sendMessageStream(
             }
           }
         } catch (e) {
-          console.error('解析流式数据错误:', e);
+          // 静默处理解析错误
         }
       }
     }

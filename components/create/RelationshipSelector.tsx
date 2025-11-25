@@ -19,12 +19,12 @@ export const RelationshipSelector: React.FC<RelationshipSelectorProps> = ({
     <View>
       <Text className="text-white text-base font-medium mb-4">与我的关系</Text>
       <View className="flex-row flex-wrap" style={{ gap: 8 }}>
-        {options.map((option, index) => {
+        {options.map((option) => {
           const isSelected = selected === option;
           // 计算每个选项的宽度：屏幕宽度减去左右padding(48px = 24px * 2)和3个gap(24px = 8px * 3)，除以4个选项
           const optionWidth = (SCREEN_WIDTH - 48 - 24) / 4;
           return (
-            <View key={index} style={{ marginBottom: 12, width: optionWidth }}>
+            <View key={option} style={{ marginBottom: 12, width: optionWidth }}>
               <TouchableOpacity
                 onPress={() => onSelect(option)}
                 style={{

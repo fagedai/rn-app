@@ -26,21 +26,21 @@ const BACKGROUND_IMAGES = [
 // Q8界面选项配置
 const Q8_OPTIONS_BASE: Omit<SelectionOptionConfig, 'showInfoIcon' | 'onInfoPress'>[] = [
   { 
-    label: '邻家的活泼学妹', 
+    label: '邻家的元气邻居', 
     subtitle: '“今天又在楼下遇见你啦，要不要一起遛狗？”',
-    value: '邻家的活泼学妹',
+    value: '邻家的元气邻居',
     backgroundImage: BACKGROUND_IMAGES[0],
   },
   { 
-    label: '取快递撞到的女孩', 
+    label: '取快递撞到的同学', 
     subtitle: '“上次撞到你还没道歉呢，我请奶茶？”',
-    value: '取快递撞到的女孩',
+    value: '取快递撞到的同学',
     backgroundImage: BACKGROUND_IMAGES[1],
   },
   { 
-    label: '喜欢耍酷的街舞少年', 
+    label: '喜欢耍酷的街舞练习生', 
     subtitle: '“今晚广场有cypher，你来当我的唯一观众？”',
-    value: '喜欢耍酷的街舞少年',
+    value: '喜欢耍酷的街舞练习生',
     backgroundImage: BACKGROUND_IMAGES[2],
   },
   { 

@@ -5,15 +5,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUserStore } from '@/store/userStore';
 import { updateUserInfo } from '@/services/api/user';
-import { Toast } from '@/components/common/Toast';
+import { ErrorModal } from '@/components/common/ErrorModal';
 import { SingleNavButton } from '@/components/common/SingleNavButton';
-import { useToast } from '@/hooks/useToast';
+import { useErrorModal } from '@/hooks/useErrorModal';
 
 export default function EditUsername() {
   const router = useRouter();
   const { userInfo, setName } = useUserStore();
   const [username, setUsername] = useState(userInfo.name || '');
-  const toast = useToast(2000);
+  const errorModal = useErrorModal();
   const inputRef = useRef<TextInput>(null);
   const [hasUserCleared, setHasUserCleared] = useState(false);
 
@@ -57,7 +57,7 @@ export default function EditUsername() {
   const handleModify = async () => {
     const validation = validateUsername(username);
     if (!validation.valid) {
-      toast.show(validation.error || '用户名有误，请重新输入合法用户名');
+      errorModal.show(validation.error || '用户名有误，请重新输入合法用户名');
       return;
     }
 
@@ -81,7 +81,7 @@ export default function EditUsername() {
       setName(trimmedUsername);
       
       // 显示成功提示
-      toast.show('修改成功');
+      errorModal.show('修改成功', '修改成功');
       
       // 延迟返回，让用户看到成功提示
       setTimeout(() => {
@@ -90,7 +90,7 @@ export default function EditUsername() {
     } catch (error) {
       console.error('修改用户名失败:', error);
       const errorMessage = error instanceof Error ? error.message : '修改失败，请稍后重试';
-      toast.show(errorMessage);
+      errorModal.show(errorMessage);
     }
   };
 
@@ -216,11 +216,11 @@ export default function EditUsername() {
             />
         </View>
       </SafeAreaView>
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        duration={toast.duration}
-        onHide={toast.hide}
+      <ErrorModal
+        visible={errorModal.visible}
+        message={errorModal.error}
+        title={errorModal.title || '操作失败'}
+        onClose={errorModal.hide}
       />
     </ImageBackground>
   );
