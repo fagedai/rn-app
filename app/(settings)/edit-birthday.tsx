@@ -2,21 +2,25 @@ import React, { useRef, useEffect, useState } from 'react';
 import { View, ImageBackground, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeArea } from '@/hooks/useSafeArea';
 import { LoginHeader } from '@/components/common/LoginHeader';
 import { DatePickerColumn } from '@/components/login/DatePickerColumn';
-import { SingleNavButton } from '@/components/common/SingleNavButton';
+import { QuestionnaireLayout } from '@/components/questionnaire/QuestionnaireLayout';
+import { QuestionnaireFloorButtons } from '@/components/questionnaire/QuestionnaireFloorButtons';
 import { useUserStore } from '@/store/userStore';
 import { updateUserInfo } from '@/services/api/user';
 import { ErrorModal } from '@/components/common/ErrorModal';
 import { useErrorModal } from '@/hooks/useErrorModal';
 import { isLeapYear, getDaysInMonth, formatBirthday } from '@/utils/dateUtils';
 
+const HEADER_HEIGHT = 44; // LoginHeader 高度
+
 const ITEM_HEIGHT = 50;
 const TITLE_HEIGHT = 32; // 标题高度：16px字体（约24px行高） + 8px marginBottom
 
 export default function EditBirthday() {
   const router = useRouter();
+  const { top } = useSafeArea();
   const { userInfo, setBirthday } = useUserStore();
   const errorModal = useErrorModal();
   
@@ -220,8 +224,10 @@ export default function EditBirthday() {
       className="flex-1"
     >
       <LoginHeader title="修改生日" backButton={true} />
-      <SafeAreaView className="flex-1">
-        <View className="flex-1 px-6">
+      <QuestionnaireLayout
+        header={<View />} // LoginHeader 是绝对定位的，header 模块为空
+        headerHeight={top + HEADER_HEIGHT + 10} // 安全区域 + header高度 + 10px间距
+        content={
           <View
             style={{
               flex: 1,
@@ -313,14 +319,17 @@ export default function EditBirthday() {
               </View>
             </View>
           </View>
-
-          <SingleNavButton
-            text="保存"
-            onPress={handleSave}
+        }
+        floor={
+          <QuestionnaireFloorButtons
+            onBack={() => router.back()}
+            onNext={handleSave}
+            backText="取消"
+            nextText="保存"
             showPrivacyNotice={false}
           />
-        </View>
-      </SafeAreaView>
+        }
+      />
       <ErrorModal
         visible={errorModal.visible}
         message={errorModal.error}

@@ -1,19 +1,22 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, ImageBackground, Text, TextInput, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeArea } from '@/hooks/useSafeArea';
+import { LoginHeader } from '@/components/common/LoginHeader';
+import { QuestionnaireLayout } from '@/components/questionnaire/QuestionnaireLayout';
+import { QuestionnaireFloorButtons } from '@/components/questionnaire/QuestionnaireFloorButtons';
 import { useUserStore } from '@/store/userStore';
 import { ErrorModal } from '@/components/common/ErrorModal';
 import { GlassContainer } from '@/components/common/GlassContainer';
-import { SingleNavButton } from '@/components/common/SingleNavButton';
 import { sendChangePhoneCode, confirmChangePhone } from '@/services/api/user';
 import { useErrorModal } from '@/hooks/useErrorModal';
+
+const HEADER_HEIGHT = 44; // LoginHeader 高度
 
 
 export default function EditPhone() {
   const router = useRouter();
+  const { top } = useSafeArea();
   const { userInfo, setPhone } = useUserStore();
   const [phone, setPhoneLocal] = useState('');
   const [code, setCode] = useState('');
@@ -130,106 +133,93 @@ export default function EditPhone() {
       resizeMode="cover"
       className="flex-1"
     >
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          headerTransparent: true,
-          headerTitle: '修改手机号',
-          headerTitleStyle: { color: '#fff', fontSize: 16 },
-          headerTitleAlign: 'center',
-          headerBackVisible: false, // 完全隐藏默认返回按钮
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={{ paddingLeft: 16 }}>
-              <Image
-                source={require('@/assets/arrow-left.png')}
-                style={{ width: 24, height: 24 }}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-          ),
-          headerRight: () => <View style={{ width: 40 }} />,
-        }}
-      />
-      <SafeAreaView className="flex-1">
-        <View className="flex-1 justify-center px-6">
-          {/* 说明文字 */}
-          <Text style={styles.description}>
-            请保持您最新的手机号码，输入新的手机号码以更改您当前的手机号码{maskedPhone}。
-          </Text>
+      <LoginHeader title="修改手机号" backButton={true} />
+      <QuestionnaireLayout
+        header={<View />} // LoginHeader 是绝对定位的，header 模块为空
+        headerHeight={top + HEADER_HEIGHT + 10} // 安全区域 + header高度 + 10px间距
+        content={
+          <View className="flex-1 justify-center px-6">
+            {/* 说明文字 */}
+            <Text style={styles.description}>
+              请保持您最新的手机号码，输入新的手机号码以更改您当前的手机号码{maskedPhone}。
+            </Text>
 
-          {/* 手机号输入框 */}
-          <View style={styles.inputContainer}>
-            <GlassContainer borderRadius={30} highlightHeight={60} style={styles.inputBorder}>
-              <View style={styles.fieldContainer}>
-                <View style={styles.fieldRow}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="手机号"
-                  placeholderTextColor="#D9D8E9"
-                  value={phone}
-                  onChangeText={setPhoneLocal}
-                  keyboardType="phone-pad"
-                  selectionColor="#9EA9FF"
-                  autoCorrect={false}
-                  autoCapitalize="none"
-                  textAlignVertical="center"
-                />
-                </View>
-              </View>
-            </GlassContainer>
-          </View>
-
-          {/* 验证码输入框和发送按钮 */}
-          <View style={styles.inputContainer}>
-            <GlassContainer borderRadius={30} highlightHeight={60} style={styles.inputBorder}>
-              <View style={styles.fieldContainer}>
-                <View style={styles.fieldRow}>
+            {/* 手机号输入框 */}
+            <View style={styles.inputContainer}>
+              <GlassContainer borderRadius={30} highlightHeight={60} style={styles.inputBorder}>
+                <View style={styles.fieldContainer}>
+                  <View style={styles.fieldRow}>
                   <TextInput
-                    style={[styles.input, styles.codeInput]}
-                    placeholder="验证码"
+                    style={styles.input}
+                    placeholder="手机号"
                     placeholderTextColor="#D9D8E9"
-                    value={code}
-                    onChangeText={(text) => {
-                      // 限制为6位数字
-                      const numericText = text.replace(/[^0-9]/g, '').slice(0, 6);
-                      setCode(numericText);
-                    }}
-                    keyboardType="number-pad"
+                    value={phone}
+                    onChangeText={setPhoneLocal}
+                    keyboardType="phone-pad"
                     selectionColor="#9EA9FF"
                     autoCorrect={false}
                     autoCapitalize="none"
                     textAlignVertical="center"
-                    maxLength={6}
                   />
-                  <TouchableOpacity
-                    style={[styles.sendButton, !canSendCode && styles.sendButtonDisabled]}
-                    activeOpacity={0.8}
-                    onPress={handleSendCode}
-                    disabled={!canSendCode}
-                  >
-                    {countdown > 0 ? (
-                      <Text style={styles.countdownText}>{countdown}s</Text>
-                    ) : (
-                      <Image 
-                        source={require('@/assets/send.png')} 
-                        style={styles.sendIcon} 
-                      />
-                    )}
-                  </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-            </GlassContainer>
-          </View>
+              </GlassContainer>
+            </View>
 
-          {/* 保存按钮 */}
-            <SingleNavButton
-            text={saving ? '保存中...' : '保存'}
-              onPress={handleSave}
-            disabled={!canSave || saving}
+            {/* 验证码输入框和发送按钮 */}
+            <View style={styles.inputContainer}>
+              <GlassContainer borderRadius={30} highlightHeight={60} style={styles.inputBorder}>
+                <View style={styles.fieldContainer}>
+                  <View style={styles.fieldRow}>
+                    <TextInput
+                      style={[styles.input, styles.codeInput]}
+                      placeholder="验证码"
+                      placeholderTextColor="#D9D8E9"
+                      value={code}
+                      onChangeText={(text) => {
+                        // 限制为6位数字
+                        const numericText = text.replace(/[^0-9]/g, '').slice(0, 6);
+                        setCode(numericText);
+                      }}
+                      keyboardType="number-pad"
+                      selectionColor="#9EA9FF"
+                      autoCorrect={false}
+                      autoCapitalize="none"
+                      textAlignVertical="center"
+                      maxLength={6}
+                    />
+                    <TouchableOpacity
+                      style={[styles.sendButton, !canSendCode && styles.sendButtonDisabled]}
+                      activeOpacity={0.8}
+                      onPress={handleSendCode}
+                      disabled={!canSendCode}
+                    >
+                      {countdown > 0 ? (
+                        <Text style={styles.countdownText}>{countdown}s</Text>
+                      ) : (
+                        <Image 
+                          source={require('@/assets/send.png')} 
+                          style={styles.sendIcon} 
+                        />
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </GlassContainer>
+            </View>
+          </View>
+        }
+        floor={
+          <QuestionnaireFloorButtons
+            onBack={() => router.back()}
+            onNext={handleSave}
+            backText="取消"
+            nextText={saving ? '保存中...' : '保存'}
             showPrivacyNotice={false}
-            />
-        </View>
-      </SafeAreaView>
+            nextDisabled={!canSave || saving}
+          />
+        }
+      />
       <ErrorModal
         visible={errorModal.visible}
         message={errorModal.error}

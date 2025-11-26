@@ -1,19 +1,26 @@
-import React, { useRef, useState } from 'react';
-import { View, ImageBackground, Text, TouchableOpacity, Image, ScrollView, ActivityIndicator } from 'react-native';
-import { useRouter, Stack } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useRef, useState, useEffect } from 'react';
+import { View, ImageBackground, ScrollView } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useSafeArea } from '@/hooks/useSafeArea';
+import { LoginHeader } from '@/components/common/LoginHeader';
 import { GenderPicker } from '@/components/login/GenderPicker';
+import { QuestionnaireLayout } from '@/components/questionnaire/QuestionnaireLayout';
+import { QuestionnaireFloorButtons } from '@/components/questionnaire/QuestionnaireFloorButtons';
 import { useCreateStore } from '@/store/createStore';
 import { useUserStore } from '@/store/userStore';
 import { saveAiSettings } from '@/services/api/aiSettings';
 import { ErrorModal } from '@/components/common/ErrorModal';
 import { useErrorModal } from '@/hooks/useErrorModal';
+import { track } from '@/services/tracking';
+
+const HEADER_HEIGHT = 44; // LoginHeader 高度
 
 // NEST性别类型
 type NestGenderType = '男' | '女' | '不愿意透露';
 
 export default function EditNestGender() {
   const router = useRouter();
+  const { top } = useSafeArea();
   const { aiGender, setAiGender, nestName } = useCreateStore();
   const { userInfo } = useUserStore();
   const [loading, setLoading] = useState(false);
@@ -35,6 +42,23 @@ export default function EditNestGender() {
   const [currentSelectedGender, setCurrentSelectedGender] = useState<NestGenderType>(() => {
     return getSelectedGender();
   });
+
+  // 确保初始滚动位置正确
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (scrollViewRef.current && currentSelectedGender) {
+        const genderIndex = genders.indexOf(currentSelectedGender);
+        if (genderIndex >= 0) {
+          const itemTotalHeight = 50 + 25; // ITEM_HEIGHT + ITEM_SPACING
+          scrollViewRef.current.scrollTo({
+            y: genderIndex * itemTotalHeight,
+            animated: false,
+          });
+        }
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [currentSelectedGender, genders]);
 
   // 处理性别变化（用户滑动时调用）
   const handleGenderChange = (gender: NestGenderType) => {
@@ -91,6 +115,16 @@ export default function EditNestGender() {
       // 更新本地store
       setAiGender(genderCode);
       
+      // 机器人设定修改埋点
+      track('bot_settings_update', {
+        field: 'nest_gender',
+        old_value: aiGender,
+        new_value: genderCode,
+        bot_id: userInfo.profileId || '',
+      }, {
+        page_id: 'edit_nest_gender',
+      });
+      
       // 成功，直接返回
       router.back();
     } catch (error) {
@@ -107,48 +141,16 @@ export default function EditNestGender() {
       resizeMode="cover"
       className="flex-1"
     >
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          headerTransparent: true,
-          headerTitle: `${nestName || 'AI机器人'}的性别`,
-          headerTitleStyle: { color: '#fff', fontSize: 16 },
-          headerTitleAlign: 'center',
-          headerBackVisible: false,
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={{ paddingLeft: 16 }}>
-              <Image
-                source={require('@/assets/arrow-left.png')}
-                style={{ width: 24, height: 24 }}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-          ),
-          headerRight: () => <View style={{ width: 40 }} />,
-        }}
-      />
-      <SafeAreaView className="flex-1">
-        <View className="flex-1 justify-center px-6">
-          {/* 提示文案 */}
-          <Text
-            style={{
-              color: 'rgba(255, 255, 255, 0.6)',
-              fontSize: 14,
-              textAlign: 'center',
-              marginBottom: 24,
-              paddingHorizontal: 20,
-            }}
-          >
-            选择NEST的性别
-          </Text>
-
-          {/* 性别选择器 */}
+      <LoginHeader title={`${nestName || 'AI机器人'}的性别`} backButton={true} />
+      <QuestionnaireLayout
+        header={<View />} // LoginHeader 是绝对定位的，header 模块为空
+        headerHeight={top + HEADER_HEIGHT + 10} // 安全区域 + header高度 + 10px间距
+        content={
           <View
             style={{
-              display: 'flex',
+              flex: 1,
               justifyContent: 'center',
               alignItems: 'center',
-              height: 400,
             }}
           >
             <View
@@ -156,7 +158,6 @@ export default function EditNestGender() {
                 flex: 1,
                 width: '100%',
                 maxWidth: 308,
-                alignSelf: 'center',
               }}
             >
               <GenderPicker
@@ -167,33 +168,18 @@ export default function EditNestGender() {
               />
             </View>
           </View>
-
-          {/* 保存按钮 */}
-          <View style={{ marginTop: 40 }}>
-            <TouchableOpacity
-              style={{
-                width: 298,
-                height: 44,
-                borderRadius: 22,
-                alignSelf: 'center',
-                backgroundColor: 'rgba(255,255,255,0.25)',
-                justifyContent: 'center',
-                alignItems: 'center',
-                opacity: loading ? 0.5 : 1,
-              }}
-              onPress={handleSave}
-              disabled={loading}
-              activeOpacity={0.8}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text className="text-white text-base font-bold">保存</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </SafeAreaView>
+        }
+        floor={
+          <QuestionnaireFloorButtons
+            onBack={() => router.back()}
+            onNext={handleSave}
+            backText="取消"
+            nextText={loading ? '保存中...' : '保存'}
+            showPrivacyNotice={false}
+            nextDisabled={loading}
+          />
+        }
+      />
       <ErrorModal
         visible={errorModal.visible}
         message={errorModal.error}

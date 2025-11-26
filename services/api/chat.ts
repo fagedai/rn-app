@@ -5,7 +5,7 @@
 import { fetchWithTimeout, getApiBaseUrl } from '@/utils/apiUtils';
 
 const BASE_URL = getApiBaseUrl();
-const REQUEST_TIMEOUT = 30000; // 30秒超时（流式请求）
+const REQUEST_TIMEOUT = 120000; // 2分钟超时（流式请求，图片消息需要更长时间）
 
 // 开发模式：使用模拟API（当没有后端时）
 const USE_MOCK_API = !BASE_URL || BASE_URL === '' || process.env.EXPO_PUBLIC_USE_MOCK_API === 'true';

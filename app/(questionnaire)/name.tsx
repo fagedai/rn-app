@@ -11,6 +11,8 @@ import { validateName } from '@/utils/validation';
 import { ErrorModal } from '@/components/common/ErrorModal';
 import { QuestionnaireLayout } from '@/components/questionnaire/QuestionnaireLayout';
 import { QuestionnaireFloorButton } from '@/components/questionnaire/QuestionnaireFloorButton';
+import { track } from '@/services/tracking';
+import { useEffect } from 'react';
 
 const HEADER_HEIGHT = 44; // LoginHeader 高度
 
@@ -36,11 +38,30 @@ export default function LoginName() {
       return;
     }
 
+    // 问卷题目作答埋点
+    track('questionnaire_answer', {
+      question_id: 'q1_name',
+      question_type: 'text_input',
+      answer: name.trim(),
+    }, {
+      page_id: 'questionnaire_name',
+    });
+
     // 保存到问卷store
     setQ1Name(name.trim());
     // 进入Q2
     router.push('/(questionnaire)/gender');
   };
+
+  // 问卷第一页曝光埋点
+  useEffect(() => {
+    track('page_view_questionnaire', {
+      question_id: 'q1_name',
+      question_type: 'text_input',
+    }, {
+      page_id: 'questionnaire_name',
+    });
+  }, []);
 
   return (
     <ImageBackground

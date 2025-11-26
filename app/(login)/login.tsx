@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ImageBackground, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import Constants from 'expo-constants';
 import { LoginHeader } from '@/components/common/LoginHeader';
+import { track } from '@/services/tracking';
 import { PhoneDisplay } from '@/components/login/PhoneDisplay';
 import { useUserStore, GenderType } from '@/store/userStore';
 import { TermsModal } from '@/components/common/TermsModal';
@@ -28,12 +29,26 @@ const ONEPASS_APP_SECRET = process.env.EXPO_PUBLIC_ONEPASS_APP_SECRET || extra?.
 
 export default function LoginMain() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ from?: string }>();
   const { userInfo, setPhone, setToken, setUserId, setName, setGender, setBirthday, setInterests, setBackgroundStory, setIsNewUser } = useUserStore();
   const { bottom } = useSafeArea();
   const [displayPhone, setDisplayPhone] = useState(
     userInfo.phone || '等待授权获取本机号码',
   );
   const { agreed, toggleAgreed } = useAgreementStore();
+  
+  // 登录页曝光埋点
+  useEffect(() => {
+    const fromPage = params.from || 'splash';
+    const mode = userInfo.token ? 'login' : 'register';
+    
+    track('page_view_login', {
+      mode,
+      from_page: fromPage,
+    }, {
+      page_id: 'login_page',
+    });
+  }, [params.from, userInfo.token]);
   
   // 固定底部按钮样式（距离底部94px + 安全区域）
   const bottomButtonStyle = useMemo(() => ({
@@ -88,6 +103,14 @@ export default function LoginMain() {
           showErrorModal(initError ?? '当前环境暂不支持一键登录，请稍后再试', '无法使用一键登录');
         }
         return;
+      }
+
+      // 点击一键登录埋点
+      if (trigger === 'manual') {
+        track('click_one_tap_login', {
+          from_page: 'login_page',
+          has_read_agreement: agreed,
+        });
       }
 
       try {
@@ -321,7 +344,13 @@ export default function LoginMain() {
         <View className="flex-1 items-center">
           <Text className="text-white text-base text-center mb-[80px]">您的手机号</Text>
           <PhoneDisplay phone={displayPhone} />
-          <TouchableOpacity onPress={() => router.push('/phone')}>
+          <TouchableOpacity onPress={() => {
+            // 点击短信登录埋点
+            track('click_sms_login', {
+              from_page: 'login_page',
+            });
+            router.push('/phone');
+          }}>
             <Text className="text-[#D9D9D9] text-[13px] mt-[74px] text-center underline">
               其他手机号登录
             </Text>

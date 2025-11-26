@@ -14,6 +14,7 @@ import { RoleInfoModal } from '@/components/common/RoleInfoModal';
 import { QuestionnaireLayout } from '@/components/questionnaire/QuestionnaireLayout';
 import { QuestionnaireProgressTitle } from '@/components/questionnaire/QuestionnaireProgressTitle';
 import { QuestionnaireFloorButtons } from '@/components/questionnaire/QuestionnaireFloorButtons';
+import { track } from '@/services/tracking';
 
 // 4张图片，随机分配给15个选项
 const BACKGROUND_IMAGES = [
@@ -291,8 +292,26 @@ export default function Q8RoleTypeSelection() {
 
     try {
       setIsSubmitting(true);
+      
+      // 问卷提交埋点（提交前）
+      track('questionnaire_submit', {
+        question_count: 7, // 问卷总题数
+        has_archetype: !!submitData.aiRoleType,
+      }, {
+        page_id: 'questionnaire_role_type',
+      });
+      
       // 提交问卷，获取 profileId
       const profileId = await submitQuestionnaire(questionnaireData, userInfo.token);
+      
+      // 机器人创建成功埋点
+      track('bot_create_result', {
+        bot_id: profileId,
+        result: 'success',
+        has_archetype: !!submitData.aiRoleType,
+      }, {
+        page_id: 'questionnaire_role_type',
+      });
       
       // 保存 profileId 到 store
       const { setProfileId } = useUserStore.getState();
@@ -306,6 +325,15 @@ export default function Q8RoleTypeSelection() {
     } catch (err) {
       console.error('提交问卷失败:', err);
       const errorMessage = err instanceof Error ? err.message : '提交失败，请稍后重试';
+      
+      // 机器人创建失败埋点
+      track('bot_create_result', {
+        result: 'failed',
+        error_message: errorMessage,
+      }, {
+        page_id: 'questionnaire_role_type',
+      });
+      
       setError(errorMessage);
       setShowErrorModal(true);
       setIsSubmitting(false);

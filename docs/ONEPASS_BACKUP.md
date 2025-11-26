@@ -27,9 +27,13 @@
 
 ## 使用方法
 
-### 备份文件
+### ⚠️ 重要：正确的操作顺序
 
-在重新构建前，运行备份脚本：
+**关键点**：`npx expo prebuild --clean` 会**删除整个 android 文件夹**并重新生成，所以必须在 prebuild **之后**、构建**之前**恢复文件。
+
+### 完整操作流程
+
+#### 步骤 1: 备份文件（在 prebuild 之前）
 
 ```powershell
 # Windows PowerShell
@@ -38,14 +42,39 @@
 
 备份文件会保存在 `backup-onepass-YYYYMMDD-HHMMSS` 目录中。
 
-### 恢复文件
+#### 步骤 2: 执行 prebuild（会删除 android 文件夹）
 
-重新构建后，运行恢复脚本：
+```bash
+npx expo prebuild --clean
+```
+
+⚠️ **注意**：这个命令会删除整个 `android` 文件夹并重新生成，所有自定义文件都会丢失！
+
+#### 步骤 3: 恢复文件（在 prebuild 之后，构建之前）
 
 ```powershell
 # Windows PowerShell
-.\scripts\restore-onepass.ps1 -BackupDir "backup-onepass-20241125-143000"
+.\scripts\restore-onepass.ps1 -BackupDir "backup-onepass-20251125-153826"
 ```
+
+**必须在构建之前恢复**，否则一键登录功能将无法使用。
+
+#### 步骤 4: 构建应用
+
+```bash
+# Android
+npx expo run:android
+
+# 或 iOS
+npx expo run:ios
+```
+
+### 为什么需要这个顺序？
+
+1. **prebuild --clean 会删除 android 文件夹**：所有自定义的 Kotlin 文件、配置文件、AAR 文件都会被删除
+2. **prebuild 会重新生成基础结构**：生成新的 `MainApplication.kt`、`build.gradle` 等文件
+3. **恢复脚本会覆盖重新生成的文件**：用备份的自定义内容替换新生成的文件
+4. **如果先构建再恢复**：构建时缺少一键登录文件，会导致编译失败或功能不可用
 
 ## 手动备份和恢复
 

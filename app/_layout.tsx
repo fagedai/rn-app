@@ -1,12 +1,13 @@
 import 'global.css';
 import { Stack } from 'expo-router';
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Text, View, AppState, AppStateStatus } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { Agbalumo_400Regular } from '@expo-google-fonts/agbalumo';
 import { ABeeZee_400Regular } from '@expo-google-fonts/abeezee';
 import { LogBox } from 'react-native';
+import { initTracking, track } from '@/services/tracking';
 
 // 设置全局错误处理
 if (typeof ErrorUtils !== 'undefined') {
@@ -35,6 +36,30 @@ export default function RootLayout() {
     Agbalumo: Agbalumo_400Regular,
     ABeeZee: ABeeZee_400Regular,
   });
+
+  // 初始化埋点（App 启动时）
+  React.useEffect(() => {
+    initTracking();
+    
+    // 上报 App 启动事件
+    track('app_launch', {
+      launch_type: 'cold', // 冷启动（后续可以区分热启动）
+    });
+  }, []);
+
+  // 监听 App 前后台切换（预留，当前版本不实现）
+  React.useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      // 预留：app_foreground 事件
+      // if (nextAppState === 'active') {
+      //   track('app_foreground', { ... });
+      // }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   React.useEffect(() => {
     console.log('fontsLoaded', fontsLoaded);

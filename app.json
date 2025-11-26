@@ -46,6 +46,9 @@
     "extra": {
       "onepass": {
         "appSecret": "+RS7zNeo6PiFHj2qzIKWN9HP4rP9hLol+octzq4iRC7qWq4muyEgt4ptW71kXnSH7Hez8QE7Tw2njA/A5ernIp630hSbQIoQUZOKMfC36f65mv813wjEbjxWFdWDTP89dvpe98mTEY16hGgtOydGPjNnTH46tnN3UaGmnwWr8rr1f2wU4bRxNEjFWK9wp3Wm/ynmD4yeqwmxtzvmd/qQ+sUm60P5858jgrmh/LbMnGoaC3dQHD5u0u0btS2KpS7idaDLpZY5YS7COzlUJhXJJbbrgWEMmmP43dQqRLwx/f0Z1YLJjiLLGw=="
+      },
+      "api": {
+        "baseUrl": "http://8.166.129.71:18081/api"
       }
     }
   }

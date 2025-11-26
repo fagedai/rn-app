@@ -1,18 +1,23 @@
-import React, { useRef, useState } from 'react';
-import { View, ImageBackground, Text, ScrollView, StyleSheet } from 'react-native';
+import React, { useRef, useState, useEffect } from 'react';
+import { View, ImageBackground, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeArea } from '@/hooks/useSafeArea';
 import { LoginHeader } from '@/components/common/LoginHeader';
 import { GenderPicker } from '@/components/login/GenderPicker';
-import { SingleNavButton } from '@/components/common/SingleNavButton';
+import { QuestionnaireLayout } from '@/components/questionnaire/QuestionnaireLayout';
+import { QuestionnaireFloorButtons } from '@/components/questionnaire/QuestionnaireFloorButtons';
 import { useUserStore, GenderType } from '@/store/userStore';
 import { updateUserInfo } from '@/services/api/user';
-import { getAllGenderTexts, genderTextToCode, genderCodeToText } from '@/utils/genderUtils';
+import { getAllGenderTexts, genderTextToCode, genderCodeToText, GenderDisplayText } from '@/utils/genderUtils';
 import { ErrorModal } from '@/components/common/ErrorModal';
 import { useErrorModal } from '@/hooks/useErrorModal';
+import { track } from '@/services/tracking';
+
+const HEADER_HEIGHT = 44; // LoginHeader 高度
 
 export default function EditGender() {
   const router = useRouter();
+  const { top } = useSafeArea();
   const { userInfo, setGender } = useUserStore();
   const scrollViewRef = useRef<ScrollView>(null);
   
@@ -25,13 +30,30 @@ export default function EditGender() {
   const initialGenderText = genderCodeToText(initialGenderCode) || genderTexts[0];
   
   // 本地状态管理选中的性别文本（用于 UI）
-  const [selectedGenderText, setSelectedGenderText] = useState<string>(initialGenderText);
+  const [selectedGenderText, setSelectedGenderText] = useState<GenderDisplayText>(initialGenderText as GenderDisplayText);
   const [loading, setLoading] = useState(false);
   const errorModal = useErrorModal();
 
+  // 确保初始滚动位置正确
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (scrollViewRef.current && selectedGenderText) {
+        const genderIndex = genderTexts.indexOf(selectedGenderText);
+        if (genderIndex >= 0) {
+          const itemTotalHeight = 50 + 25; // ITEM_HEIGHT + ITEM_SPACING
+          scrollViewRef.current.scrollTo({
+            y: genderIndex * itemTotalHeight,
+            animated: false,
+          });
+        }
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [selectedGenderText, genderTexts]);
+
   // 处理性别变化（用户滑动时调用，接收文本）
   const handleGenderChange = (genderText: string) => {
-    setSelectedGenderText(genderText);
+    setSelectedGenderText(genderText as GenderDisplayText);
   };
 
   // 处理保存按钮点击
@@ -63,6 +85,15 @@ export default function EditGender() {
       // 更新本地store（数字格式）
       setGender(genderCode);
       
+      // 用户信息修改埋点
+      track('user_info_update', {
+        field: 'gender',
+        old_value: userInfo.gender,
+        new_value: genderCode,
+      }, {
+        page_id: 'edit_gender',
+      });
+      
       // 显示成功提示
       errorModal.show('已保存', '保存成功');
       
@@ -88,8 +119,10 @@ export default function EditGender() {
       className="flex-1"
     >
       <LoginHeader title="您的性别" backButton={true} />
-      <SafeAreaView className="flex-1">
-        <View className="flex-1 px-6">
+      <QuestionnaireLayout
+        header={<View />} // LoginHeader 是绝对定位的，header 模块为空
+        headerHeight={top + HEADER_HEIGHT + 10} // 安全区域 + header高度 + 10px间距
+        content={
           <View
             style={{
               flex: 1,
@@ -97,16 +130,11 @@ export default function EditGender() {
               alignItems: 'center',
             }}
           >
-            {/* 说明文案 */}
-            <Text style={styles.hintText}>用于生成合适内容</Text>
-            
-            {/* 性别选择器 */}
             <View
               style={{
                 flex: 1,
                 width: '100%',
                 maxWidth: 308,
-                marginTop: 32,
               }}
             >
               <GenderPicker
@@ -117,16 +145,18 @@ export default function EditGender() {
               />
             </View>
           </View>
-
-          {/* 保存按钮 */}
-          <SingleNavButton
-            text={loading ? '保存中...' : '保存'}
-            onPress={handleSave}
+        }
+        floor={
+          <QuestionnaireFloorButtons
+            onBack={() => router.back()}
+            onNext={handleSave}
+            backText="取消"
+            nextText={loading ? '保存中...' : '保存'}
             showPrivacyNotice={false}
-            disabled={loading}
+            nextDisabled={loading}
           />
-        </View>
-      </SafeAreaView>
+        }
+      />
       <ErrorModal
         visible={errorModal.visible}
         message={errorModal.error}
@@ -136,13 +166,4 @@ export default function EditGender() {
     </ImageBackground>
   );
 }
-
-const styles = StyleSheet.create({
-  hintText: {
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: -50,
-  },
-});
 

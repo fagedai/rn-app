@@ -13,6 +13,9 @@ import { uploadImageToSupabase, getFileSizeInMB } from '@/services/imageUpload';
 import { sendMessageStream } from '@/services/api/chat';
 import { useUserStore } from '@/store/userStore';
 import { ErrorModal } from '@/components/common/ErrorModal';
+import { track } from '@/services/tracking';
+import { splitMessageByNewlines } from '@/utils/messageSplitter';
+import { useCreateStore } from '@/store/createStore';
 
 interface ChatInputProps {
   onSend: (content: string) => void;
@@ -39,6 +42,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     conversationId, 
     addMessage, 
     updateMessage,
+    setMessages,
     setStreamingMessageId,
     setConversationId,
   } = useChatStore();
@@ -352,6 +356,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           uploadProgress: 100,
         });
 
+        // 发送图片消息埋点
+        const { profileId } = useUserStore.getState().userInfo;
+        const { isFromHistory } = useChatStore.getState();
+        track('chat_message_send', {
+          bot_id: profileId || '',
+          session_id: sessionId,
+          message_id: messageId,
+          content_length: 0, // 图片消息长度为 0
+          has_emoji: false,
+          from_history_session: isFromHistory,
+        });
+
         // 步骤9: 通过 agent/invoke 接口发送图片 URL 到后端
         // 参数：{ userId, imageUrl, conversationId }
         // 响应流程和普通消息一样（流式响应）
@@ -403,10 +419,72 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             
             const store = useChatStore.getState();
             const currentStreamingId = store.streamingMessageId || assistantMessageId;
+            const assistantMessage = store.messages[sessionId]?.find(
+              (m) => m.message_id === currentStreamingId
+            );
             
-            // 更新助手消息状态
-            updateMessage(sessionId, currentStreamingId, {
-              status: 'sent',
+            if (!assistantMessage) {
+              setStreamingMessageId(null);
+              return;
+            }
+
+            // 检查是否需要分割消息（根据换行符）
+            const fullContent = assistantMessage.content;
+            const messageParts = splitMessageByNewlines(fullContent);
+
+            if (messageParts.length > 1) {
+              // 需要分割成多个消息气泡
+              const currentMessages = store.messages[sessionId] || [];
+              
+              // 找到原消息的索引
+              const originalMessageIndex = currentMessages.findIndex(
+                (m) => m.message_id === currentStreamingId
+              );
+
+              if (originalMessageIndex >= 0) {
+                // 创建新的消息列表
+                const newMessages: Message[] = [];
+                
+                // 保留原消息之前的所有消息
+                newMessages.push(...currentMessages.slice(0, originalMessageIndex));
+                
+                // 为每个分割后的部分创建独立的消息气泡
+                messageParts.forEach((part, index) => {
+                  const partMessageId = index === 0 
+                    ? currentStreamingId // 第一个部分使用原消息ID
+                    : generateUUID(); // 其他部分使用新ID
+                  
+                  newMessages.push({
+                    message_id: partMessageId,
+                    session_id: sessionId,
+                    role: 'assistant',
+                    content: part,
+                    status: 'sent',
+                    client_ts: assistantMessage.client_ts + index * 10, // 递增时间戳，保持顺序
+                  });
+                });
+                
+                // 保留原消息之后的所有消息
+                newMessages.push(...currentMessages.slice(originalMessageIndex + 1));
+                
+                // 更新消息列表
+                setMessages(sessionId, newMessages);
+              }
+            } else {
+              // 不需要分割，直接更新状态
+              updateMessage(sessionId, currentStreamingId, {
+                status: 'sent',
+              });
+            }
+            
+            // 回复展示完成埋点（使用完整内容长度）
+            const { profileId } = useUserStore.getState().userInfo;
+            track('chat_reply_show', {
+              bot_id: profileId || '',
+              session_id: sessionId,
+              message_id: messageId,
+              reply_length: fullContent.length,
+              is_interrupted: false,
             });
             
             setStreamingMessageId(null);

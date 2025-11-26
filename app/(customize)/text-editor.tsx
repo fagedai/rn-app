@@ -19,6 +19,7 @@ import { saveAiSettings } from '@/services/api/aiSettings';
 import { useUserStore } from '@/store/userStore';
 import { ErrorModal } from '@/components/common/ErrorModal';
 import { HelpModal } from '@/components/common/HelpModal';
+import { track } from '@/services/tracking';
 
 const BACKGROUND_STORY_PLACEHOLDER =
   'NEST是一位28岁的陶艺艺术家，来自洛杉矶。他们刚刚举办了第一次大型展览。TA 幽默、外向、开朗过着可持续的生活方式。NEST热爱徒步旅行、攀岩和大自然，喜欢浪漫喜剧和情景喜剧，梦想着开设自己的陶艺学校。';
@@ -96,6 +97,16 @@ export default function TextEditor() {
 
         // 更新本地 store
         setAiBackgroundStory(text);
+
+        // 机器人设定修改埋点
+        track('bot_settings_update', {
+          field: 'nest_backstory',
+          old_value: aiBackgroundStory,
+          new_value: text,
+          bot_id: userInfo.profileId || '',
+        }, {
+          page_id: 'text_editor',
+        });
 
         // 显示成功提示
         showErrorModal('已成功保存', '保存成功');

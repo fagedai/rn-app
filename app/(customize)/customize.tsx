@@ -13,6 +13,7 @@ import { saveAiSettings } from '@/services/api/aiSettings';
 import { useUserStore } from '@/store/userStore';
 import { ErrorModal } from '@/components/common/ErrorModal';
 import { useFocusEffect } from '@react-navigation/native';
+import { track } from '@/services/tracking';
 // import { Ionicons } from '@expo/vector-icons';
 
 const RELATIONSHIP_OPTIONS = ['朋友', '伴侣', '兄弟姐妹', '导师'];
@@ -121,6 +122,16 @@ export default function CustomizeAI() {
         setIsTraining(false);
         // 清除待处理的关系
         pendingRelationshipRef.current = null;
+        
+        // 机器人设定修改埋点
+        track('bot_settings_update', {
+          field: 'nest_relationship',
+          old_value: oldRelationship,
+          new_value: relationshipToSave,
+          bot_id: userInfo.profileId || '',
+        }, {
+          page_id: 'customize_page',
+        });
       } catch (error) {
         console.error('保存关系失败:', error);
         
@@ -141,6 +152,13 @@ export default function CustomizeAI() {
   // 页面聚焦时刷新记忆（从记忆页面返回时，使用本地记录的最后创建的记忆）
   useFocusEffect(
     useCallback(() => {
+      // 机器人设定页曝光埋点
+      track('page_view_customize', {
+        bot_id: userInfo.profileId || '',
+      }, {
+        page_id: 'customize_page',
+      });
+
       // 使用 setTimeout 延迟状态更新，避免快速状态变化导致视图管理错误
       const timer = setTimeout(() => {
         try {
@@ -176,7 +194,7 @@ export default function CustomizeAI() {
       return () => {
         clearTimeout(timer);
       };
-    }, [nestLastMemory, lastCreatedMemory, setAiMemory, setLastCreatedMemory, aiMemory])
+    }, [nestLastMemory, lastCreatedMemory, setAiMemory, setLastCreatedMemory, aiMemory, userInfo.profileId])
   );
 
   // 组件卸载时清理定时器

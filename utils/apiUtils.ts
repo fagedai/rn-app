@@ -67,8 +67,30 @@ export function handleApiError(error: unknown): string {
 
 /**
  * 获取 API 基地址
+ * 优先级：
+ * 1. 环境变量 EXPO_PUBLIC_API_BASE_URL（开发环境）
+ * 2. app.json 中的 extra.api.baseUrl（生产环境）
+ * 3. 硬编码的默认值（兜底）
  */
 export function getApiBaseUrl(): string {
-  return process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://8.166.129.71:18081/api';
+  // 优先使用环境变量（开发环境）
+  const envUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+  if (envUrl && envUrl.trim() !== '') {
+    return envUrl;
+  }
+  
+  // 尝试从 app.json 的 extra 配置中获取（生产环境）
+  try {
+    const Constants = require('expo-constants');
+    const extra = Constants.expoConfig?.extra as { api?: { baseUrl?: string } } | undefined;
+    if (extra?.api?.baseUrl && extra.api.baseUrl.trim() !== '') {
+      return extra.api.baseUrl;
+    }
+  } catch (error) {
+    // 忽略错误，继续使用默认值
+  }
+  
+  // 兜底：使用硬编码的API地址
+  return 'http://8.166.129.71:18081/api';
 }
 

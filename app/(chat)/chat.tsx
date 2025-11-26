@@ -31,6 +31,8 @@ import { generateUUID } from '@/utils/uuid';
 import { ErrorModal } from '@/components/common/ErrorModal';
 import { uploadImageToSupabase } from '@/services/imageUpload';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { track } from '@/services/tracking';
+import { splitMessageByNewlines } from '@/utils/messageSplitter';
 
 const PAGE_SIZE = 30;
 
@@ -78,6 +80,18 @@ export default function ChatScreen() {
       try {
         // agent_id 功能已移除，直接设置会话
         setCurrentSession(null, null);
+
+        const isFromHistory = !!params.sessionId;
+        const botId = userInfo.profileId || '';
+
+        // 聊天页曝光埋点
+        track('page_view_chat', {
+          bot_id: botId,
+          from_page: isFromHistory ? 'history' : 'home',
+          from_history_session: isFromHistory,
+        }, {
+          page_id: 'chat_page',
+        });
 
         if (params.sessionId) {
           // 从历史记录进入
@@ -387,6 +401,17 @@ export default function ChatScreen() {
       const messageId = generateUUID();
       const clientTs = Date.now();
       const sessionId = currentSessionId;
+      const botId = userInfo.profileId || '';
+
+      // 发送消息埋点
+      track('chat_message_send', {
+        bot_id: botId,
+        session_id: sessionId || 'temp',
+        message_id: messageId,
+        content_length: content.length,
+        has_emoji: /[\u{1F300}-\u{1F9FF}]/u.test(content), // 简单检测 emoji
+        from_history_session: isFromHistory,
+      });
 
       // 创建用户消息
       const userMessage: Message = {
@@ -480,13 +505,78 @@ export default function ChatScreen() {
           
           // 更新助手消息状态
           const currentStreamingId = store.streamingMessageId || `assistant-${messageId}`;
-          updateMessage(finalSessionId, currentStreamingId, {
-            status: 'sent',
-          });
+          const assistantMessage = store.messages[finalSessionId]?.find(
+            (m) => m.message_id === currentStreamingId
+          );
+          
+          if (!assistantMessage) {
+            setStreamingMessageId(null);
+            setInputDisabled(false);
+            setRetryCount(0);
+            return;
+          }
+
+          // 检查是否需要分割消息（根据换行符）
+          const fullContent = assistantMessage.content;
+          const messageParts = splitMessageByNewlines(fullContent);
+
+          if (messageParts.length > 1) {
+            // 需要分割成多个消息气泡
+            const currentMessages = store.messages[finalSessionId] || [];
+            
+            // 找到原消息的索引
+            const originalMessageIndex = currentMessages.findIndex(
+              (m) => m.message_id === currentStreamingId
+            );
+
+            if (originalMessageIndex >= 0) {
+              // 创建新的消息列表
+              const newMessages: Message[] = [];
+              
+              // 保留原消息之前的所有消息
+              newMessages.push(...currentMessages.slice(0, originalMessageIndex));
+              
+              // 为每个分割后的部分创建独立的消息气泡
+              messageParts.forEach((part, index) => {
+                const partMessageId = index === 0 
+                  ? currentStreamingId // 第一个部分使用原消息ID
+                  : generateUUID(); // 其他部分使用新ID
+                
+                newMessages.push({
+                  message_id: partMessageId,
+                  session_id: finalSessionId,
+                  role: 'assistant',
+                  content: part,
+                  status: 'sent',
+                  client_ts: assistantMessage.client_ts + index * 10, // 递增时间戳，保持顺序
+                });
+              });
+              
+              // 保留原消息之后的所有消息
+              newMessages.push(...currentMessages.slice(originalMessageIndex + 1));
+              
+              // 更新消息列表
+              setMessages(finalSessionId, newMessages);
+            }
+          } else {
+            // 不需要分割，直接更新状态
+            updateMessage(finalSessionId, currentStreamingId, {
+              status: 'sent',
+            });
+          }
           
           // 更新用户消息状态
           updateMessage(finalSessionId, messageId, {
             status: 'sent',
+          });
+
+          // 回复展示完成埋点（使用完整内容长度）
+          track('chat_reply_show', {
+            bot_id: userInfo.profileId || '',
+            session_id: finalSessionId,
+            message_id: messageId,
+            reply_length: fullContent.length,
+            is_interrupted: false,
           });
 
           setStreamingMessageId(null);

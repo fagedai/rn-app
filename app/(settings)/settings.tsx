@@ -15,6 +15,8 @@ import { LoginHeader } from '@/components/common/LoginHeader';
 import { useSafeArea } from '@/hooks/useSafeArea';
 // import { logout } from '@/services/api/logout'; // 已移除
 import { formatBirthday } from '@/utils/dateUtils';
+import { track } from '@/services/tracking';
+import { useEffect } from 'react';
 
 export default function Settings() {
   const router = useRouter();
@@ -25,6 +27,13 @@ export default function Settings() {
   const { setAgreed } = useAgreementStore();
   const { getTopSpacing } = useSafeArea();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // 设置页曝光埋点
+  useEffect(() => {
+    track('page_view_settings', {}, {
+      page_id: 'settings_page',
+    });
+  }, []);
 
   const userName = userInfo.name || '小张';
   const userGender = userInfo.gender; // 保持数字格式用于传递
@@ -78,7 +87,7 @@ export default function Settings() {
       resizeMode="cover"
       className="flex-1"
     >
-      <LoginHeader title="设置" />
+      <LoginHeader title="设置" backButton={true} />
       <SafeAreaView className="flex-1" edges={['bottom']}>
         {/* 固定区域：用户信息和套餐横幅 */}
         <View className="px-6" style={{ paddingTop: getTopSpacing(44, 20) }}>

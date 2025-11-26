@@ -126,6 +126,7 @@ export default function LoginPhone() {
   }, [sending, countdown, localPhone, agreed, showErrorModal]);
 
   const handleLogin = useCallback(async () => {
+    router.replace('/(questionnaire)/name');
     if (!agreed) {
       showErrorModal('请先阅读并同意服务条款与隐私政策');
       return;
