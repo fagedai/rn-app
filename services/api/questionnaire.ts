@@ -3,6 +3,13 @@
  */
 
 import { fetchWithTimeout, getApiBaseUrl } from '@/utils/apiUtils';
+import { 
+  getDeviceIdPublic, 
+  getPlatformPublic, 
+  getAppVersionPublic, 
+  getOSVersionPublic, 
+  getSessionIdPublic 
+} from '@/services/tracking';
 
 const BASE_URL = getApiBaseUrl();
 const REQUEST_TIMEOUT = 5000; // 5秒超时
@@ -38,18 +45,38 @@ export async function submitQuestionnaire(
   console.log('[Questionnaire] 请求:', { url, body: data });
 
   try {
-  const response = await fetchWithTimeout(
-    url,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+    // 获取设备信息
+    const deviceId = getDeviceIdPublic();
+    const platform = getPlatformPublic();
+    const appVersion = getAppVersionPublic();
+    const osVersion = getOSVersionPublic();
+    const sessionId = getSessionIdPublic();
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      'X-Device-Id': deviceId,
+      'X-Platform': platform,
+      'X-App-Version': appVersion,
+    };
+
+    // 可选字段：只在有值时才添加
+    if (osVersion) {
+      headers['X-OS-Version'] = osVersion;
+    }
+    if (sessionId) {
+      headers['X-Session-Id'] = sessionId;
+    }
+
+    const response = await fetchWithTimeout(
+      url,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
       },
-      body: JSON.stringify(data),
-    },
-    REQUEST_TIMEOUT
-  );
+      REQUEST_TIMEOUT
+    );
 
     const responseText = await response.text();
 

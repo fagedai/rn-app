@@ -13,9 +13,12 @@ import { ErrorModal } from '@/components/common/ErrorModal';
 import { sendVerificationCode, verifyVerificationCode } from '@/services/api/login';
 import { getUserInfo } from '@/services/api/user';
 import { useSafeArea } from '@/hooks/useSafeArea';
+import { track } from '@/services/tracking';
+import { useLocalSearchParams } from 'expo-router';
 
 export default function LoginPhone() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ from?: string }>();
   const { userInfo, setPhone, setCode, setToken, setUserId, setName, setGender, setBirthday, setInterests, setBackgroundStory, setIsNewUser } = useUserStore();
   const { agreed, toggleAgreed } = useAgreementStore();
   const { top, bottom } = useSafeArea();
@@ -80,6 +83,17 @@ export default function LoginPhone() {
   const closeErrorModal = useCallback(() => {
     setErrorModal((prev) => ({ ...prev, visible: false }));
   }, []);
+
+  // 验证码登录页曝光埋点
+  useEffect(() => {
+    const fromPage = params.from || 'login_page';
+    
+    track('page_view_sms_login', {
+      from_page: fromPage,
+    }, {
+      page_id: 'sms_login_page',
+    });
+  }, [params.from]);
 
   // 只在组件挂载时同步一次外部 store 的值（例如从其他页面导航过来时已设置的值）
   useEffect(() => {

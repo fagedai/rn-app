@@ -7,6 +7,7 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { generateUUID } from '@/utils/uuid';
 import { useUserStore } from '@/store/userStore';
+import { supabase, TRACKING_EVENTS_TABLE, isSupabaseConfigured } from '@/services/supabase';
 
 // 动态导入可选依赖
 let Application: { nativeApplicationVersion?: string } | null = null;
@@ -135,27 +136,46 @@ export interface TrackingEvent extends CommonTrackingFields {
 }
 
 /**
- * 获取埋点上报接口地址
+ * 分离公共字段和业务字段
+ * 公共字段作为表字段，业务字段合并到 properties JSONB 字段
  */
-function getTrackingApiUrl(): string | null {
-  // 优先使用环境变量配置的埋点接口
-  const trackingUrl = process.env.EXPO_PUBLIC_TRACKING_API_URL;
-  if (trackingUrl) {
-    return trackingUrl;
-  }
-  
-  // 如果没有配置，使用主 API 地址 + /tracking/events
-  const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
-  if (baseUrl) {
-    return `${baseUrl}/tracking/events`;
-  }
-  
-  // 如果都没有配置，返回 null（只打印，不上报）
-  return null;
+function separateFields(event: TrackingEvent): {
+  tableFields: Record<string, unknown>;
+  properties: Record<string, unknown>;
+} {
+  // 公共字段列表（这些字段会作为表字段）
+  const commonFieldNames = [
+    'event_id',
+    'event_name',
+    'event_time',
+    'user_id',
+    'device_id',
+    'platform',
+    'app_version',
+    'os_version',
+    'network_type',
+    'page_id',
+    'trace_id',
+    'session_id',
+  ];
+
+  const tableFields: Record<string, unknown> = {};
+  const properties: Record<string, unknown> = {};
+
+  // 分离字段
+  Object.keys(event).forEach((key) => {
+    if (commonFieldNames.includes(key)) {
+      tableFields[key] = event[key];
+    } else {
+      properties[key] = event[key];
+    }
+  });
+
+  return { tableFields, properties };
 }
 
 /**
- * 上报埋点数据（实际发送到后端或第三方平台）
+ * 上报埋点数据到 Supabase 数据库
  */
 async function sendTrackingEvent(event: TrackingEvent): Promise<void> {
   try {
@@ -163,43 +183,76 @@ async function sendTrackingEvent(event: TrackingEvent): Promise<void> {
     if (DEBUG_TRACKING) {
       console.log('[Tracking] 埋点事件:', JSON.stringify(event, null, 2));
     }
-    
-    // 获取上报接口地址
-    const trackingUrl = getTrackingApiUrl();
-    
-    // 如果没有配置接口地址，只打印不上报（开发环境）
-    if (!trackingUrl) {
+
+    // 检查 Supabase 是否已配置
+    if (!isSupabaseConfigured() || !supabase) {
       if (DEBUG_TRACKING) {
-        console.log('[Tracking] 未配置埋点接口地址，仅打印不上报');
+        console.warn('[Tracking] Supabase 未配置，仅打印不上报');
       }
       return;
     }
-    
-    // 获取用户 token（可选，如果后端需要认证）
-    const userInfo = useUserStore.getState().userInfo;
-    const token = userInfo.token;
-    
-    // 构建请求头
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+
+    // 分离公共字段和业务字段
+    const { tableFields, properties } = separateFields(event);
+
+    // 构建插入数据
+    const insertData = {
+      ...tableFields,
+      properties: properties, // 业务字段合并到 properties JSONB 字段
     };
-    
-    // 如果用户已登录，添加 Authorization header
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+
+    // 插入到 Supabase 数据库
+    // 注意：Supabase JS 客户端会自动使用创建时传入的 key 对应的角色
+    // 如果使用 anon key，则使用 anon 角色；如果使用 service_role key，则使用 service_role 角色
+    // 使用 returning: 'minimal' 避免 RLS 策略不允许 SELECT 时的错误
+    const { data, error } = await supabase
+      .from(TRACKING_EVENTS_TABLE)
+      .insert([insertData], { returning: 'minimal' });
+
+    if (error) {
+      // 插入失败，记录错误但不影响主流程
+      if (DEBUG_TRACKING) {
+        console.error('[Tracking] 插入失败:', error);
+        console.error('[Tracking] 错误代码:', error.code);
+        console.error('[Tracking] 错误消息:', error.message);
+        console.error('[Tracking] 错误详情:', error.details);
+        console.error('[Tracking] 错误提示:', error.hint);
+        console.error('[Tracking] 插入数据:', JSON.stringify(insertData, null, 2));
+        
+        // 检查 Supabase 客户端配置
+        if (supabase) {
+          // @ts-ignore - 访问内部属性用于调试
+          const clientUrl = (supabase as any).supabaseUrl;
+          // @ts-ignore
+          const clientKey = (supabase as any).supabaseKey;
+          console.error('[Tracking] Supabase URL:', clientUrl);
+          console.error('[Tracking] Supabase Key 前20字符:', clientKey?.substring(0, 20));
+          
+          // 尝试解码 JWT payload 来检查 role
+          let keyType = 'unknown';
+          try {
+            if (clientKey) {
+              const parts = clientKey.split('.');
+              if (parts.length >= 2) {
+                // 解码 payload（第二部分）
+                const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+                keyType = payload.role === 'anon' ? 'anon key' : 
+                         payload.role === 'service_role' ? 'service_role key' : 
+                         `unknown role: ${payload.role}`;
+              }
+            }
+          } catch (e) {
+            keyType = '无法解码 JWT';
+          }
+          console.error('[Tracking] 使用的 Key 类型:', keyType);
+        }
+      }
+      return;
     }
-    
-    // 上报到后端接口
-    // 使用 fetch 而不是 fetchWithTimeout，避免埋点超时影响主流程
-    const response = await fetch(trackingUrl, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(event),
-    });
-    
-    // 检查响应状态（但不抛出错误，避免影响主流程）
-    if (!response.ok && DEBUG_TRACKING) {
-      console.warn('[Tracking] 上报失败，HTTP 状态:', response.status);
+
+    // 插入成功
+    if (DEBUG_TRACKING && data) {
+      console.log('[Tracking] 插入成功:', data[0]?.id);
     }
   } catch (error) {
     // 埋点失败不影响主流程，静默处理
@@ -280,5 +333,33 @@ export function getSessionId(): string | null {
  */
 export function getDeviceIdPublic(): string {
   return getDeviceId();
+}
+
+/**
+ * 获取平台信息（导出供其他模块使用）
+ */
+export function getPlatformPublic(): 'ios' | 'android' {
+  return getPlatform();
+}
+
+/**
+ * 获取 App 版本号（导出供其他模块使用）
+ */
+export function getAppVersionPublic(): string {
+  return getAppVersion();
+}
+
+/**
+ * 获取系统版本（导出供其他模块使用，同步版本）
+ */
+export function getOSVersionPublic(): string | undefined {
+  return Platform.Version?.toString();
+}
+
+/**
+ * 获取 Session ID（导出供其他模块使用）
+ */
+export function getSessionIdPublic(): string | null {
+  return sessionId;
 }
 

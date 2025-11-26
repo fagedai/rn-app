@@ -24,7 +24,7 @@ export const LoginHeader: React.FC<LoginHeaderProps> = ({ title, backButton = tr
             console.log('[LoginHeader] 返回按钮被点击');
             try {
               // 直接调用 router.back()，如果无法返回，它不会报错，只是不执行任何操作
-              router.back();
+                router.back();
             } catch (error) {
               console.error('[LoginHeader] 返回失败:', error);
               // 如果返回失败，尝试跳转到设置页面

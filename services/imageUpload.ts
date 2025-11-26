@@ -1,23 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
 import { generateUUID } from '@/utils/uuid';
 import * as FileSystem from 'expo-file-system/legacy';
-
-// Supabase 配置
-// 方式1: 直接在代码中配置（推荐，因为 Supabase URL 和 Anon Key 是公开的）
-// 方式2: 通过环境变量配置（设置 EXPO_PUBLIC_SUPABASE_URL 和 EXPO_PUBLIC_SUPABASE_ANON_KEY）
-const SUPABASE_URL_CONFIG = 'https://swaijtxqidosvxslaybl.supabase.co'; // Supabase 项目 URL
-const SUPABASE_ANON_KEY_CONFIG = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3YWlqdHhxaWRvc3Z4c2xheWJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxMTE1NTUsImV4cCI6MjA3OTY4NzU1NX0.vtcAUqeHIEmyFirQxQw-9UtE-ZNWeWQ1rHlMRIXMjaw'; // Supabase Anon Key
-
-const SUPABASE_URL = SUPABASE_URL_CONFIG || process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = SUPABASE_ANON_KEY_CONFIG || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+import { supabase, isSupabaseConfigured } from '@/services/supabase';
 
 // 上传超时时间：2分钟（120秒）
 const UPLOAD_TIMEOUT = 120000; // 120秒 = 2分钟
-
-// 创建 Supabase 客户端
-const supabase = SUPABASE_URL && SUPABASE_ANON_KEY 
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-  : null;
 
 /**
  * 上传图片到 Supabase Storage
@@ -34,8 +20,8 @@ export async function uploadImageToSupabase(
   onProgress?: (progress: number) => void
 ): Promise<string> {
   // 如果 Supabase 未配置，返回本地 URI 作为临时方案（仅用于开发测试）
-  if (!supabase) {
-    console.warn('Supabase 未配置，使用本地 URI 作为临时方案。请在 services/imageUpload.ts 中配置 SUPABASE_URL 和 SUPABASE_ANON_KEY，或设置环境变量 EXPO_PUBLIC_SUPABASE_URL 和 EXPO_PUBLIC_SUPABASE_ANON_KEY');
+  if (!isSupabaseConfigured() || !supabase) {
+    console.warn('Supabase 未配置，使用本地 URI 作为临时方案。请在 services/supabase.ts 中配置 Supabase URL 和 Anon Key');
     
     // 模拟上传进度
     if (onProgress) {

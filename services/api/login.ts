@@ -3,6 +3,13 @@
  */
 
 import { getApiBaseUrl } from '@/utils/apiUtils';
+import { 
+  getDeviceIdPublic, 
+  getPlatformPublic, 
+  getAppVersionPublic, 
+  getOSVersionPublic, 
+  getSessionIdPublic 
+} from '@/services/tracking';
 
 // 基地址：http://8.166.129.71:18081
 // API前缀：/api/mobile
@@ -48,11 +55,31 @@ export async function exchangeOnePassToken(token: string): Promise<ExchangeToken
   console.log('[Login] 请求:', { url });
 
   try {
+    // 获取设备信息
+    const deviceId = getDeviceIdPublic();
+    const platform = getPlatformPublic();
+    const appVersion = getAppVersionPublic();
+    const osVersion = getOSVersionPublic();
+    const sessionId = getSessionIdPublic();
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Device-Id': deviceId,
+      'X-Platform': platform,
+      'X-App-Version': appVersion,
+    };
+
+    // 可选字段：只在有值时才添加
+    if (osVersion) {
+      headers['X-OS-Version'] = osVersion;
+    }
+    if (sessionId) {
+      headers['X-Session-Id'] = sessionId;
+    }
+
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     // 确保响应状态码有效
@@ -191,11 +218,31 @@ export async function verifyVerificationCode(phone: string, code: string): Promi
   console.log('[Login] 请求:', { url });
   
   try {
+    // 获取设备信息
+    const deviceId = getDeviceIdPublic();
+    const platform = getPlatformPublic();
+    const appVersion = getAppVersionPublic();
+    const osVersion = getOSVersionPublic();
+    const sessionId = getSessionIdPublic();
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Device-Id': deviceId,
+      'X-Platform': platform,
+      'X-App-Version': appVersion,
+    };
+
+    // 可选字段：只在有值时才添加
+    if (osVersion) {
+      headers['X-OS-Version'] = osVersion;
+    }
+    if (sessionId) {
+      headers['X-Session-Id'] = sessionId;
+    }
+
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     // 确保响应状态码有效

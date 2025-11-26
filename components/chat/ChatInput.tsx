@@ -472,8 +472,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               }
             } else {
               // 不需要分割，直接更新状态
-              updateMessage(sessionId, currentStreamingId, {
-                status: 'sent',
+            updateMessage(sessionId, currentStreamingId, {
+              status: 'sent',
               });
             }
             

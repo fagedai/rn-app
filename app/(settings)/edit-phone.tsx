@@ -138,75 +138,75 @@ export default function EditPhone() {
         header={<View />} // LoginHeader 是绝对定位的，header 模块为空
         headerHeight={top + HEADER_HEIGHT + 10} // 安全区域 + header高度 + 10px间距
         content={
-          <View className="flex-1 justify-center px-6">
-            {/* 说明文字 */}
-            <Text style={styles.description}>
-              请保持您最新的手机号码，输入新的手机号码以更改您当前的手机号码{maskedPhone}。
-            </Text>
+        <View className="flex-1 justify-center px-6">
+          {/* 说明文字 */}
+          <Text style={styles.description}>
+            请保持您最新的手机号码，输入新的手机号码以更改您当前的手机号码{maskedPhone}。
+          </Text>
 
-            {/* 手机号输入框 */}
-            <View style={styles.inputContainer}>
-              <GlassContainer borderRadius={30} highlightHeight={60} style={styles.inputBorder}>
-                <View style={styles.fieldContainer}>
-                  <View style={styles.fieldRow}>
+          {/* 手机号输入框 */}
+          <View style={styles.inputContainer}>
+            <GlassContainer borderRadius={30} highlightHeight={60} style={styles.inputBorder}>
+              <View style={styles.fieldContainer}>
+                <View style={styles.fieldRow}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="手机号"
+                  placeholderTextColor="#D9D8E9"
+                  value={phone}
+                  onChangeText={setPhoneLocal}
+                  keyboardType="phone-pad"
+                  selectionColor="#9EA9FF"
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                  textAlignVertical="center"
+                />
+                </View>
+              </View>
+            </GlassContainer>
+          </View>
+
+          {/* 验证码输入框和发送按钮 */}
+          <View style={styles.inputContainer}>
+            <GlassContainer borderRadius={30} highlightHeight={60} style={styles.inputBorder}>
+              <View style={styles.fieldContainer}>
+                <View style={styles.fieldRow}>
                   <TextInput
-                    style={styles.input}
-                    placeholder="手机号"
+                    style={[styles.input, styles.codeInput]}
+                    placeholder="验证码"
                     placeholderTextColor="#D9D8E9"
-                    value={phone}
-                    onChangeText={setPhoneLocal}
-                    keyboardType="phone-pad"
+                    value={code}
+                    onChangeText={(text) => {
+                      // 限制为6位数字
+                      const numericText = text.replace(/[^0-9]/g, '').slice(0, 6);
+                      setCode(numericText);
+                    }}
+                    keyboardType="number-pad"
                     selectionColor="#9EA9FF"
                     autoCorrect={false}
                     autoCapitalize="none"
                     textAlignVertical="center"
+                    maxLength={6}
                   />
-                  </View>
+                  <TouchableOpacity
+                    style={[styles.sendButton, !canSendCode && styles.sendButtonDisabled]}
+                    activeOpacity={0.8}
+                    onPress={handleSendCode}
+                    disabled={!canSendCode}
+                  >
+                    {countdown > 0 ? (
+                      <Text style={styles.countdownText}>{countdown}s</Text>
+                    ) : (
+                      <Image 
+                        source={require('@/assets/send.png')} 
+                        style={styles.sendIcon} 
+                      />
+                    )}
+                  </TouchableOpacity>
                 </View>
-              </GlassContainer>
-            </View>
-
-            {/* 验证码输入框和发送按钮 */}
-            <View style={styles.inputContainer}>
-              <GlassContainer borderRadius={30} highlightHeight={60} style={styles.inputBorder}>
-                <View style={styles.fieldContainer}>
-                  <View style={styles.fieldRow}>
-                    <TextInput
-                      style={[styles.input, styles.codeInput]}
-                      placeholder="验证码"
-                      placeholderTextColor="#D9D8E9"
-                      value={code}
-                      onChangeText={(text) => {
-                        // 限制为6位数字
-                        const numericText = text.replace(/[^0-9]/g, '').slice(0, 6);
-                        setCode(numericText);
-                      }}
-                      keyboardType="number-pad"
-                      selectionColor="#9EA9FF"
-                      autoCorrect={false}
-                      autoCapitalize="none"
-                      textAlignVertical="center"
-                      maxLength={6}
-                    />
-                    <TouchableOpacity
-                      style={[styles.sendButton, !canSendCode && styles.sendButtonDisabled]}
-                      activeOpacity={0.8}
-                      onPress={handleSendCode}
-                      disabled={!canSendCode}
-                    >
-                      {countdown > 0 ? (
-                        <Text style={styles.countdownText}>{countdown}s</Text>
-                      ) : (
-                        <Image 
-                          source={require('@/assets/send.png')} 
-                          style={styles.sendIcon} 
-                        />
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </GlassContainer>
-            </View>
+              </View>
+            </GlassContainer>
+          </View>
           </View>
         }
         floor={
@@ -219,7 +219,7 @@ export default function EditPhone() {
             nextDisabled={!canSave || saving}
           />
         }
-      />
+            />
       <ErrorModal
         visible={errorModal.visible}
         message={errorModal.error}

@@ -164,6 +164,13 @@ export default function LoginMain() {
         // 如果用户切换其他登录方式，直接跳转，不显示错误
         if (errorCode === 'USER_SWITCHED_LOGIN_METHOD' || errorMessage.includes('USER_SWITCHED_LOGIN_METHOD') || errorMessage.includes('700001') || errorMessage.includes('用户切换其他登录方式')) {
           console.log('[Login] 用户切换其他登录方式，跳转到手机号登录页面');
+          
+          // 埋点：用户在授权页点击其他方式登录
+          track('click_sms_login', {
+            from_page: 'one_tap_auth_page', // 从授权页切换
+            switch_from_auth: true, // 标记是从授权页切换的
+          });
+          
           setLoading(false);
           try {
             quitLoginPage();
