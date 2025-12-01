@@ -24,6 +24,7 @@ export default function CustomizeAI() {
   const { userInfo } = useUserStore();
   const {
     nestName,
+    aiNestName,
     aiGender,
     aiRelationship,
     setAiRelationship,
@@ -264,7 +265,7 @@ export default function CustomizeAI() {
                     textAlign: 'center',
                   }}
                 >
-                  {nestName}
+                  {nestName || aiNestName || 'NEST'}
                 </Text>
               </TouchableOpacity>
             </View>

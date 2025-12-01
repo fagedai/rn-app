@@ -352,78 +352,11 @@ export async function updateMemory(id: string, request: UpdateMemoryRequest, pro
 }
 
 /**
- * 删除记忆（单个）
- * 接口：DELETE /api/agent/memory
- * Header：Authorization: Bearer {token}
- * Body: { id, profileId }
- * @param id 记忆 ID
- * @param profileId AI Profile ID（从提交问卷接口返回）
- * @param token 认证token
- */
-export async function deleteMemory(id: string, profileId: string, token: string): Promise<void> {
-  if (!BASE_URL || BASE_URL === '') {
-    console.log('后端未配置，模拟删除成功');
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return;
-  }
-
-  const url = `${BASE_URL}/agent/memory`;
-  
-  const requestBody = {
-    id,
-    profileId,
-  };
-  
-  console.log('[Memory] 请求:', { url, body: requestBody });
-  
-  try {
-    const response = await fetchWithTimeout(
-      url,
-      {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(requestBody),
-      },
-      REQUEST_TIMEOUT
-    );
-
-    const responseText = await response.text();
-
-    if (!response.ok) {
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        return;
-      }
-      console.log('[Memory] 响应:', responseText);
-      throw new Error(responseText || '删除失败，请稍后重试');
-    }
-
-    console.log('[Memory] 响应:', responseText);
-  } catch (error) {
-    if (error instanceof Error) {
-      if (
-        error.message.includes('Failed to fetch') ||
-        error.message.includes('Network request failed') ||
-        error.message.includes('Unexpected character')
-      ) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        return;
-      }
-    }
-    throw error;
-  }
-}
-
-/**
- * 批量删除记忆
+ * 删除记忆（单个或批量）
  * 接口：DELETE /api/agent/memory
  * Header：Authorization: Bearer {token}
  * Body: { ids, profileId }
- * @param ids 记忆 ID 数组
+ * @param ids 记忆 ID 数组（单个删除时传入包含一个元素的数组）
  * @param profileId AI Profile ID（从提交问卷接口返回）
  * @param token 认证token
  */

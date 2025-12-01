@@ -196,8 +196,22 @@ export default function LoginMain() {
         }
         
         setPhoneAuthorized(false);
+        
+        // 对数据库连接错误提供更友好的提示
+        let displayMessage = errorMessage;
+        let displayTitle = '授权失败';
+        
+        if (errorMessage.includes('JDBC') || 
+            errorMessage.includes('CannotGetJdbcConnection') ||
+            errorMessage.includes('Failed to obtain JDBC Connection') ||
+            errorMessage.includes('数据库') ||
+            errorMessage.includes('服务器暂时无法连接')) {
+          displayTitle = '服务暂时不可用';
+          displayMessage = '服务器暂时无法连接，请稍后重试或使用手机号登录';
+        }
+        
         // 先显示错误弹窗，1.5秒后再跳转到短信验证页
-        showErrorModal(errorMessage, '授权失败');
+        showErrorModal(displayMessage, displayTitle);
         setTimeout(() => {
           router.push('/phone');
         }, 1500);
@@ -288,8 +302,11 @@ export default function LoginMain() {
       return;
     }
 
+    // 从 store 获取最新的 token（确保获取到最新值）
+    const currentToken = useUserStore.getState().userInfo.token;
+    
     // 检查是否有 token
-    if (!userInfo.token) {
+    if (!currentToken) {
       showErrorModal('登录信息已失效，请重新登录', '提示');
       return;
     }
@@ -298,9 +315,13 @@ export default function LoginMain() {
       setLoading(true);
 
       // 调用获取用户信息接口
-      const userInfoData = await getUserInfo(userInfo.token);
+      console.log('[Login] 使用 token 获取用户信息:', currentToken ? `${currentToken.substring(0, 20)}...` : '无token');
+      const userInfoData = await getUserInfo(currentToken);
       
       // 将获取到的用户信息映射到 userStore
+      if (userInfoData.mobile) {
+        setPhone(userInfoData.mobile); // 确保手机号从API获取并保存
+      }
       if (userInfoData.name) {
         setName(userInfoData.name);
       }

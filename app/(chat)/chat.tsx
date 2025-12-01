@@ -60,7 +60,7 @@ export default function ChatScreen() {
     setPagination,
   } = useChatStore();
 
-  const { aiRelationship, nestName } = useCreateStore();
+  const { aiRelationship, nestName, aiNestName } = useCreateStore();
   const { userInfo } = useUserStore();
   const { bottom } = useSafeArea();
 
@@ -120,6 +120,7 @@ export default function ChatScreen() {
                 setnestName,
                 setAiRelationship,
                 setAiBackgroundStory,
+                setAiGender,
               } = useCreateStore.getState();
               
               if (nestInfo.profile_id) {
@@ -134,6 +135,9 @@ export default function ChatScreen() {
               if (nestInfo.nest_name) {
                 setNestName(nestInfo.nest_name);
                 setnestName(nestInfo.nest_name);
+              }
+              if (nestInfo.nest_gender !== null && nestInfo.nest_gender !== undefined) {
+                setAiGender(nestInfo.nest_gender);
               }
               if (nestInfo.nest_relationship) {
                 setNestRelationship(nestInfo.nest_relationship);
@@ -158,9 +162,10 @@ export default function ChatScreen() {
         }
 
         // 使用默认问候语（不再调用 API）
-        const { nestName } = useCreateStore.getState();
-        const defaultGreeting = '嗨～终于见到你啦，我是Lisa💜';
-        const finalGreeting = defaultGreeting.replace(/Lisa/g, nestName);
+        const { nestName: apiName, aiNestName: tempName } = useCreateStore.getState();
+        const displayName = apiName || tempName || 'NEST';
+        const defaultGreeting = '嗨～终于见到你啦，我是NEST💜';
+        const finalGreeting = defaultGreeting.replace(/NEST/g, displayName);
         setGreetingMessage(finalGreeting);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : '初始化失败';
@@ -173,22 +178,19 @@ export default function ChatScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 当 nestName 变化时，更新招呼语
+  // 当 nestName 或 aiNestName 变化时，更新招呼语
   useEffect(() => {
-    if (greetingMessage && nestName) {
+    const displayName = nestName || aiNestName || 'NEST';
+    if (greetingMessage && displayName) {
       // 匹配 "我是XXX💜" 格式，替换名字
-      const updatedGreeting = greetingMessage.replace(/我是[^💜]+💜/g, `我是${nestName}💜`);
-      // 如果招呼语中包含旧名字（可能是其他格式），也替换（如 "Lisa"）
-      const finalGreeting = updatedGreeting.replace(/Lisa/g, nestName);
+      const updatedGreeting = greetingMessage.replace(/我是[^💜]+💜/g, `我是${displayName}💜`);
+      // 如果招呼语中包含旧名字（可能是其他格式），也替换
+      const finalGreeting = updatedGreeting.replace(/NEST/g, displayName);
       if (finalGreeting !== greetingMessage) {
         setGreetingMessage(finalGreeting);
       }
-    } else if (greetingMessage && !nestName) {
-      // 如果名字为空，使用默认名字
-      const defaultGreeting = '嗨～终于见到你啦，我是Lisa💜';
-      setGreetingMessage(defaultGreeting);
     }
-  }, [nestName, greetingMessage, setGreetingMessage]);
+  }, [nestName, aiNestName, greetingMessage, setGreetingMessage]);
 
   // 加载历史消息（从历史记录进入时调用）
   const loadHistoryMessages = async (conversationId: string) => {
@@ -335,6 +337,8 @@ export default function ChatScreen() {
               imageUrl: imageUrl,
               conversationId: conversationId || '',
               token: userInfo.token,
+              pageId: 'chat_page', // 聊天页面
+              traceId: generateUUID(), // 每次请求生成新的追踪ID
             },
             (chunk: string) => {
               // 处理流式响应
@@ -455,6 +459,8 @@ export default function ChatScreen() {
           prompt: content,
           conversationId: conversationId || '',
           token: userInfo.token,
+          pageId: 'chat_page', // 聊天页面
+          traceId: generateUUID(), // 每次请求生成新的追踪ID
         },
         // onChunk: 接收流式数据
         (chunk: string) => {
@@ -798,7 +804,7 @@ export default function ChatScreen() {
                     textAlign: 'center',
                   }}
                 >
-                  {nestName}
+                  {nestName || aiNestName || 'NEST'}
                 </Text>
                 <Text style={{ fontSize: 10, color: '#D9D9D9', marginTop: 2 }}>
                   {aiRelationship}

@@ -10,7 +10,7 @@ export function UserProfile({ userName }: UserProfileProps) {
     <View className="items-center mb-6">
       <View className="w-24 h-24 rounded-full bg-gray-400 mb-3 overflow-hidden">
         <Image
-          source={require('../../assets/icon2.png')}
+          source={require('../../assets/logo.png')}
           className="w-full h-full"
           resizeMode="cover"
         />

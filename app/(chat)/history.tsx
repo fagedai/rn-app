@@ -53,7 +53,7 @@ type TimeFilter = 'all' | '30days' | '7days';
 export default function HistoryScreen() {
   const router = useRouter();
   const { userInfo } = useUserStore();
-  const { nestName } = useCreateStore();
+  const { nestName, aiNestName } = useCreateStore();
 
   const [allRecords, setAllRecords] = useState<HistoryRecord[]>([]); // 所有记录
   const [filteredRecords, setFilteredRecords] = useState<HistoryRecord[]>([]); // 筛选后的记录
@@ -170,7 +170,7 @@ export default function HistoryScreen() {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyText}>
-          暂无历史记录，去和{nestName || 'NEST'}聊聊吧
+          暂无历史记录，去和{nestName || aiNestName || 'NEST'}聊聊吧
         </Text>
       </View>
     );

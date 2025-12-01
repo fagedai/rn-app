@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCreateStore } from '@/store/createStore';
 import { GlassContainer } from '@/components/common/GlassContainer';
@@ -19,6 +20,7 @@ import { saveAiSettings } from '@/services/api/aiSettings';
 import { useUserStore } from '@/store/userStore';
 import { ErrorModal } from '@/components/common/ErrorModal';
 import { HelpModal } from '@/components/common/HelpModal';
+import { CloseConfirmModal } from '@/components/common/CloseConfirmModal';
 import { track } from '@/services/tracking';
 
 const BACKGROUND_STORY_PLACEHOLDER =
@@ -28,6 +30,7 @@ const MAX_LENGTH = 500;
 
 export default function TextEditor() {
   const router = useRouter();
+  const navigation = useNavigation();
   const params = useLocalSearchParams<{ type: 'memory' | 'backgroundStory'; title: string }>();
   const { aiMemory, setAiMemory, aiBackgroundStory, setAiBackgroundStory } = useCreateStore();
   const { userInfo } = useUserStore();
@@ -41,6 +44,11 @@ export default function TextEditor() {
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [errorModalMessage, setErrorModalMessage] = useState('');
   const [fullScreenLoading, setFullScreenLoading] = useState(false);
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  
+  // 使用 ref 跟踪是否有未保存的更改（仅背景故事时使用）
+  const hasUnsavedChangesRef = useRef(false);
+  const initialTextRef = useRef<string>('');
 
   // 初始化：获取背景故事或使用记忆
   useEffect(() => {
@@ -50,6 +58,8 @@ export default function TextEditor() {
         const storeValue = aiBackgroundStory || '';
         setText(storeValue);
         setCharCount(storeValue.length);
+        initialTextRef.current = storeValue; // 保存初始值用于比较
+        hasUnsavedChangesRef.current = false; // 初始化时没有未保存的更改
         setLoading(false);
       } else {
         // 记忆：使用 store 中的值
@@ -60,6 +70,37 @@ export default function TextEditor() {
 
     initialize();
   }, [isBackgroundStory, aiMemory, aiBackgroundStory, setAiBackgroundStory]);
+
+  // 跟踪文本变化，更新未保存状态（仅背景故事）
+  useEffect(() => {
+    if (isBackgroundStory) {
+      hasUnsavedChangesRef.current = text.trim() !== initialTextRef.current.trim();
+    }
+  }, [text, isBackgroundStory]);
+
+  // 拦截返回操作（仅背景故事时启用）
+  useEffect(() => {
+    if (!isBackgroundStory) {
+      return;
+    }
+
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      // 如果有未保存的内容，阻止返回并显示确认弹窗
+      const hasUnsaved = hasUnsavedChangesRef.current;
+      console.log('[TextEditor] beforeRemove 触发，hasUnsaved:', hasUnsaved);
+      
+      if (hasUnsaved) {
+        e.preventDefault(); // 阻止返回
+        console.log('[TextEditor] 阻止返回，显示确认弹窗');
+        // 显示确认弹窗
+        setShowCloseModal(true);
+      } else {
+        console.log('[TextEditor] 没有未保存内容，允许返回');
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, isBackgroundStory]);
 
   // 处理文本输入
   const handleTextChange = (value: string) => {
@@ -98,6 +139,10 @@ export default function TextEditor() {
         // 更新本地 store
         setAiBackgroundStory(text);
 
+        // 更新初始值，清除未保存标记
+        initialTextRef.current = text;
+        hasUnsavedChangesRef.current = false;
+
         // 机器人设定修改埋点
         track('bot_settings_update', {
           field: 'nest_backstory',
@@ -130,6 +175,22 @@ export default function TextEditor() {
     }
   };
 
+  // 处理关闭按钮点击（仅背景故事时检查未保存）
+  const handleClose = () => {
+    if (isBackgroundStory && hasUnsavedChangesRef.current) {
+      setShowCloseModal(true);
+    } else {
+      router.back();
+    }
+  };
+
+  // 确认关闭（不保存）
+  const handleConfirmClose = () => {
+    setShowCloseModal(false);
+    hasUnsavedChangesRef.current = false; // 清除标记，允许返回
+    router.back();
+  };
+
   const backgroundImage = require('@/assets/customize_background.png')
 
   return (
@@ -150,7 +211,7 @@ export default function TextEditor() {
             }}
           >
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={handleClose}
               style={{
                 width: 48,
                 height: 48,
@@ -373,6 +434,19 @@ export default function TextEditor() {
 
       {/* 帮助弹窗 */}
       <HelpModal visible={showHelpModal} onClose={() => setShowHelpModal(false)} />
+
+      {/* 关闭确认弹窗（仅背景故事） */}
+      {isBackgroundStory && (
+        <CloseConfirmModal
+          visible={showCloseModal}
+          onReturn={() => setShowCloseModal(false)}
+          onClose={handleConfirmClose}
+          onSave={async () => {
+            setShowCloseModal(false);
+            await handleSave();
+          }}
+        />
+      )}
 
       {/* ErrorModal 提示 */}
       <ErrorModal

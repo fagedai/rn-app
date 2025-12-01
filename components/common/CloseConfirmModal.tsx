@@ -100,7 +100,7 @@ export const CloseConfirmModal: React.FC<CloseConfirmModalProps> = ({
               <View style={styles.contentNew}>
                 {/* 文本分成两层 */}
                 <View style={styles.textContainer}>
-                  <Text style={styles.textLine1}>您还没有保存修改，</Text>
+                  <Text style={styles.textLine1}>您还没有保存修改</Text>
                   <Text style={styles.textLine2}>确定现在离开吗？</Text>
                 </View>
                 

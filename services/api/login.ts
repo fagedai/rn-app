@@ -8,8 +8,11 @@ import {
   getPlatformPublic, 
   getAppVersionPublic, 
   getOSVersionPublic, 
-  getSessionIdPublic 
+  getSessionIdPublic,
+  getNetworkTypePublic,
+  initTracking
 } from '@/services/tracking';
+import { generateUUID } from '@/utils/uuid';
 
 // 基地址：http://8.166.129.71:18081
 // API前缀：/api/mobile
@@ -55,27 +58,33 @@ export async function exchangeOnePassToken(token: string): Promise<ExchangeToken
   console.log('[Login] 请求:', { url });
 
   try {
-    // 获取设备信息
+    // 获取设备信息（确保已初始化）
     const deviceId = getDeviceIdPublic();
+    const sessionId = getSessionIdPublic();
+    if (!deviceId || !sessionId) {
+      initTracking();
+    }
+    
+    const finalDeviceId = getDeviceIdPublic();
     const platform = getPlatformPublic();
     const appVersion = getAppVersionPublic();
     const osVersion = getOSVersionPublic();
-    const sessionId = getSessionIdPublic();
+    const finalSessionId = getSessionIdPublic();
+    const networkType = getNetworkTypePublic();
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'X-Device-Id': deviceId,
-      'X-Platform': platform,
-      'X-App-Version': appVersion,
+      'X-Device-Id': finalDeviceId, // getDeviceIdPublic() 总是返回 string（如果为空会自动生成）
+      'X-Platform': platform, // getPlatformPublic() 总是返回 'ios' | 'android'
+      'X-App-Version': appVersion, // getAppVersionPublic() 内部已有默认值 '1.0.0'
+      'X-OS-Version': osVersion || '', // getOSVersionPublic() 可能返回 undefined（Platform.Version 可能不存在）
+      'X-Session-Id': finalSessionId || '', // getSessionIdPublic() 可能返回 null（但已检查并初始化，理论上不会为空）
+      'X-Network-Type': networkType, // getNetworkTypePublic() 内部已有默认值 'unknown'
+      'X-Page-Id': 'login_page', // 登录页面
+      'X-Trace-Id': generateUUID(), // 每次请求生成新的追踪ID
     };
 
-    // 可选字段：只在有值时才添加
-    if (osVersion) {
-      headers['X-OS-Version'] = osVersion;
-    }
-    if (sessionId) {
-      headers['X-Session-Id'] = sessionId;
-    }
+    console.log('[Login] 请求头:', headers);
 
     const response = await fetch(url, {
       method: 'POST',
@@ -108,7 +117,16 @@ export async function exchangeOnePassToken(token: string): Promise<ExchangeToken
     // 检查后端返回的状态码（即使HTTP状态码是200，后端也可能返回错误code）
     if (responseData.code !== 200) {
       console.log('[Login] 响应:', responseText);
-      const errorMessage = responseData.message || '一键登录接口请求失败';
+      let errorMessage = responseData.message || '一键登录接口请求失败';
+      
+      // 对数据库连接错误提供更友好的提示
+      if (errorMessage.includes('JDBC') || 
+          errorMessage.includes('CannotGetJdbcConnection') ||
+          errorMessage.includes('Failed to obtain JDBC Connection') ||
+          errorMessage.includes('数据库')) {
+        errorMessage = '服务器暂时无法连接，请稍后重试';
+      }
+      
       throw new Error(errorMessage);
     }
 
@@ -165,11 +183,37 @@ export async function sendVerificationCode(phone: string): Promise<void> {
   console.log('[Login] 请求:', { url });
   
   try {
+    // 获取设备信息（确保已初始化）
+    const deviceId = getDeviceIdPublic();
+    const sessionId = getSessionIdPublic();
+    if (!deviceId || !sessionId) {
+      initTracking();
+    }
+    
+    const finalDeviceId = getDeviceIdPublic();
+    const platform = getPlatformPublic();
+    const appVersion = getAppVersionPublic();
+    const osVersion = getOSVersionPublic();
+    const finalSessionId = getSessionIdPublic();
+    const networkType = getNetworkTypePublic();
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Device-Id': finalDeviceId,
+      'X-Platform': platform,
+      'X-App-Version': appVersion,
+      'X-OS-Version': osVersion || '',
+      'X-Session-Id': finalSessionId || '',
+      'X-Network-Type': networkType,
+      'X-Page-Id': 'login_page', // 登录页面
+      'X-Trace-Id': generateUUID(), // 每次请求生成新的追踪ID
+    };
+
+    console.log('[Login] 请求头:', headers);
+
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
 
     // 确保响应状态码有效
@@ -218,27 +262,33 @@ export async function verifyVerificationCode(phone: string, code: string): Promi
   console.log('[Login] 请求:', { url });
   
   try {
-    // 获取设备信息
+    // 获取设备信息（确保已初始化）
     const deviceId = getDeviceIdPublic();
+    const sessionId = getSessionIdPublic();
+    if (!deviceId || !sessionId) {
+      initTracking();
+    }
+    
+    const finalDeviceId = getDeviceIdPublic();
     const platform = getPlatformPublic();
     const appVersion = getAppVersionPublic();
     const osVersion = getOSVersionPublic();
-    const sessionId = getSessionIdPublic();
+    const finalSessionId = getSessionIdPublic();
+    const networkType = getNetworkTypePublic();
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'X-Device-Id': deviceId,
-      'X-Platform': platform,
-      'X-App-Version': appVersion,
+      'X-Device-Id': finalDeviceId, // getDeviceIdPublic() 总是返回 string（如果为空会自动生成）
+      'X-Platform': platform, // getPlatformPublic() 总是返回 'ios' | 'android'
+      'X-App-Version': appVersion, // getAppVersionPublic() 内部已有默认值 '1.0.0'
+      'X-OS-Version': osVersion || '', // getOSVersionPublic() 可能返回 undefined（Platform.Version 可能不存在）
+      'X-Session-Id': finalSessionId || '', // getSessionIdPublic() 可能返回 null（但已检查并初始化，理论上不会为空）
+      'X-Network-Type': networkType, // getNetworkTypePublic() 内部已有默认值 'unknown'
+      'X-Page-Id': 'login_page', // 登录页面
+      'X-Trace-Id': generateUUID(), // 每次请求生成新的追踪ID
     };
 
-    // 可选字段：只在有值时才添加
-    if (osVersion) {
-      headers['X-OS-Version'] = osVersion;
-    }
-    if (sessionId) {
-      headers['X-Session-Id'] = sessionId;
-    }
+    console.log('[Login] 请求头:', headers);
 
     const response = await fetch(url, {
       method: 'POST',

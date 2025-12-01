@@ -8,6 +8,8 @@ import { Agbalumo_400Regular } from '@expo-google-fonts/agbalumo';
 import { ABeeZee_400Regular } from '@expo-google-fonts/abeezee';
 import { LogBox } from 'react-native';
 import { initTracking, track } from '@/services/tracking';
+import { useChatStore } from '@/store/chatStore';
+import { useCreateStore } from '@/store/createStore';
 
 // 设置全局错误处理
 if (typeof ErrorUtils !== 'undefined') {
@@ -47,9 +49,18 @@ export default function RootLayout() {
     });
   }, []);
 
-  // 监听 App 前后台切换（预留，当前版本不实现）
+  // 监听 App 前后台切换，在进入后台时立即保存数据
   React.useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'background' || nextAppState === 'inactive') {
+        // APP 进入后台时，立即保存聊天数据和AI相关数据
+        console.log('[App] 进入后台，立即保存数据...');
+        const { saveToStorageImmediate } = useChatStore.getState();
+        if (saveToStorageImmediate) {
+          saveToStorageImmediate();
+        }
+        // createStore 的保存是自动的，不需要手动触发
+      }
       // 预留：app_foreground 事件
       // if (nextAppState === 'active') {
       //   track('app_foreground', { ... });

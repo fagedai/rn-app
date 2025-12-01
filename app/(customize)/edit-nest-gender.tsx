@@ -21,7 +21,7 @@ type NestGenderType = '男' | '女' | '不愿意透露';
 export default function EditNestGender() {
   const router = useRouter();
   const { top } = useSafeArea();
-  const { aiGender, setAiGender, nestName } = useCreateStore();
+  const { aiGender, setAiGender, nestName, aiNestName } = useCreateStore();
   const { userInfo } = useUserStore();
   const [loading, setLoading] = useState(false);
   const errorModal = useErrorModal();
@@ -42,6 +42,9 @@ export default function EditNestGender() {
   const [currentSelectedGender, setCurrentSelectedGender] = useState<NestGenderType>(() => {
     return getSelectedGender();
   });
+  
+  // 保存初始性别值，用于比较是否有变化（避免滑动时立即更新store导致无法检测变化）
+  const initialGenderRef = useRef<1 | 2 | 3 | null>(aiGender);
 
   // 确保初始滚动位置正确
   useEffect(() => {
@@ -63,13 +66,7 @@ export default function EditNestGender() {
   // 处理性别变化（用户滑动时调用）
   const handleGenderChange = (gender: NestGenderType) => {
     setCurrentSelectedGender(gender);
-    
-    // 将选择的性别转换为编码 (1=男, 2=女, 3=不愿意透露)
-    const genderIndex = genders.indexOf(gender);
-    if (genderIndex >= 0) {
-      const genderCode = (genderIndex + 1) as 1 | 2 | 3;
-      setAiGender(genderCode);
-    }
+    // 注意：这里不立即更新 store，只在保存时更新，这样可以正确检测是否有变化
   };
 
   // 处理保存
@@ -91,8 +88,8 @@ export default function EditNestGender() {
     }
     const genderCode = (genderIndex + 1) as 1 | 2 | 3;
 
-    // 如果性别没有变化，直接返回
-    if (genderCode === aiGender) {
+    // 如果性别没有变化（与初始值比较），直接返回
+    if (genderCode === initialGenderRef.current) {
       router.back();
       return;
     }
@@ -141,7 +138,7 @@ export default function EditNestGender() {
       resizeMode="cover"
       className="flex-1"
     >
-      <LoginHeader title={`${nestName || 'AI机器人'}的性别`} backButton={true} />
+      <LoginHeader title={`${nestName || aiNestName || 'AI机器人'}的性别`} backButton={true} />
       <QuestionnaireLayout
         header={<View />} // LoginHeader 是绝对定位的，header 模块为空
         headerHeight={top + HEADER_HEIGHT + 10} // 安全区域 + header高度 + 10px间距

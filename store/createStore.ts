@@ -1,4 +1,8 @@
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// AsyncStorage 存储键名
+const STORAGE_KEY = 'create_store';
 
 interface CreateState {
   selectedRole: string | null;
@@ -9,8 +13,8 @@ interface CreateState {
   setSelectedExperience: (experience: string[]) => void;
   aiRoleType: string | null; // Q8: 你的 AI 具有哪种角色类型
   setAiRoleType: (roleType: string | null) => void;
-  // AI设置相关
-  nestName: string;
+  // AI设置相关（创建时的临时值）
+  aiNestName: string;
   setnestName: (name: string) => void;
   aiGender: 1 | 2 | 3; // 1=男, 2=女, 3=不愿意透露
   setAiGender: (gender: 1 | 2 | 3) => void;
@@ -35,57 +39,146 @@ interface CreateState {
   lastCreatedMemory: string | null;
   setLastCreatedMemory: (memory: string | null) => void;
   resetCreateState: () => void;
+  initializeFromStorage: () => Promise<void>; // 从持久化存储恢复
 }
 
-export const useCreateStore = create<CreateState>((set) => ({
+// 默认值
+const defaultState = {
   selectedRole: null,
-  setSelectedRole: (role) => set({ selectedRole: role }),
   aiExpectation: null,
-  setAiExpectation: (expectation) => set({ aiExpectation: expectation }),
   selectedExperience: [],
-  setSelectedExperience: (experience) => set({ selectedExperience: experience }),
   aiRoleType: null,
-  setAiRoleType: (roleType) => set({ aiRoleType: roleType }),
-  // AI设置默认值
-  nestName: 'Lisa',
-  setnestName: (name) => set({ nestName: name }),
-  aiGender: 2, // 默认女 (1=男, 2=女, 3=不愿意透露)
-  setAiGender: (gender) => set({ aiGender: gender }),
+  aiNestName: 'NEST',
+  aiGender: 2 as const,
   aiRelationship: '朋友',
-  setAiRelationship: (relationship) => set({ aiRelationship: relationship }),
   aiMemory: '随着时间的推移,NEST与用户之间的联系变得更加个性化。NEST会在夜间主动进行签到,感知用户何时感到孤独。',
-  setAiMemory: (memory) => set({ aiMemory: memory }),
   aiBackgroundStory: '',
-  setAiBackgroundStory: (story) => set({ aiBackgroundStory: story }),
   aiVoice: '清澈活泼女声-经典',
-  setAiVoice: (voice) => set({ aiVoice: voice }),
-  // AI基本设置信息默认值
   nestName: null,
-  setNestName: (name) => set({ nestName: name }),
   nestRelationship: null,
-  setNestRelationship: (relationship) => set({ nestRelationship: relationship }),
   nestLastMemory: null,
-  setNestLastMemory: (memory) => set({ nestLastMemory: memory }),
   nestBackstory: null,
-  setNestBackstory: (backstory) => set({ nestBackstory: backstory }),
   lastCreatedMemory: null,
-  setLastCreatedMemory: (memory) => set({ lastCreatedMemory: memory }),
-  resetCreateState: () => set({
-    selectedRole: null,
-    aiExpectation: null,
-    selectedExperience: [],
-    aiRoleType: null,
-    nestName: 'Lisa',
-    aiGender: 2, // 默认女 (1=男, 2=女, 3=不愿意透露)
-    aiRelationship: '朋友',
-    aiMemory: '随着时间的推移,NEST与用户之间的联系变得更加个性化。NEST会在夜间主动进行签到,感知用户何时感到孤独。',
-    aiBackgroundStory: '',
-    aiVoice: '清澈活泼女声-经典',
-    nestName: null,
-    nestRelationship: null,
-    nestLastMemory: null,
-    nestBackstory: null,
-    lastCreatedMemory: null,
-  }),
-}));
+};
+
+export const useCreateStore = create<CreateState>((set, get) => {
+  // 保存 get 函数供 saveToStorage 使用
+  storeGet = get;
+  
+  return {
+  ...defaultState,
+  setSelectedRole: (role) => {
+    set({ selectedRole: role });
+    saveToStorage();
+  },
+  setAiExpectation: (expectation) => {
+    set({ aiExpectation: expectation });
+    saveToStorage();
+  },
+  setSelectedExperience: (experience) => {
+    set({ selectedExperience: experience });
+    saveToStorage();
+  },
+  setAiRoleType: (roleType) => {
+    set({ aiRoleType: roleType });
+    saveToStorage();
+  },
+  setnestName: (name) => {
+    set({ aiNestName: name });
+    saveToStorage();
+  },
+  setAiGender: (gender) => {
+    set({ aiGender: gender });
+    saveToStorage();
+  },
+  setAiRelationship: (relationship) => {
+    set({ aiRelationship: relationship });
+    saveToStorage();
+  },
+  setAiMemory: (memory) => {
+    set({ aiMemory: memory });
+    saveToStorage();
+  },
+  setAiBackgroundStory: (story) => {
+    set({ aiBackgroundStory: story });
+    saveToStorage();
+  },
+  setAiVoice: (voice) => {
+    set({ aiVoice: voice });
+    saveToStorage();
+  },
+  setNestName: (name) => {
+    set({ nestName: name });
+    saveToStorage();
+  },
+  setNestRelationship: (relationship) => {
+    set({ nestRelationship: relationship });
+    saveToStorage();
+  },
+  setNestLastMemory: (memory) => {
+    set({ nestLastMemory: memory });
+    saveToStorage();
+  },
+  setNestBackstory: (backstory) => {
+    set({ nestBackstory: backstory });
+    saveToStorage();
+  },
+  setLastCreatedMemory: (memory) => {
+    set({ lastCreatedMemory: memory });
+    saveToStorage();
+  },
+  resetCreateState: async () => {
+    set(defaultState);
+    await AsyncStorage.removeItem(STORAGE_KEY);
+  },
+  initializeFromStorage: async () => {
+    try {
+      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        set({
+          ...defaultState,
+          ...parsed,
+        });
+        console.log('[CreateStore] 从持久化存储恢复数据');
+      }
+    } catch (error) {
+      console.error('[CreateStore] 从持久化存储恢复失败:', error);
+    }
+  },
+  };
+});
+
+// 保存到持久化存储（防抖）
+let saveTimeout: NodeJS.Timeout | null = null;
+let storeGet: (() => CreateState) | null = null;
+const saveToStorage = () => {
+  if (!storeGet) return;
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+  }
+  saveTimeout = setTimeout(async () => {
+    if (!storeGet) return;
+    try {
+      const state = storeGet();
+      const dataToSave = {
+        aiNestName: state.aiNestName, // 创建时的临时名字
+        aiGender: state.aiGender,
+        aiRelationship: state.aiRelationship,
+        aiMemory: state.aiMemory,
+        aiBackgroundStory: state.aiBackgroundStory,
+        aiVoice: state.aiVoice,
+        // 从API获取的 nestInfo 相关字段
+        nestName: state.nestName, // 从 API 获取的名字
+        nestRelationship: state.nestRelationship,
+        nestLastMemory: state.nestLastMemory,
+        nestBackstory: state.nestBackstory,
+        lastCreatedMemory: state.lastCreatedMemory,
+      };
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+    } catch (error) {
+      console.error('[CreateStore] 保存到持久化存储失败:', error);
+    }
+  }, 500); // 500ms 防抖
+};
 

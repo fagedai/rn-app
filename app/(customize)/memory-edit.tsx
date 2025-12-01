@@ -13,10 +13,11 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassContainer } from '@/components/common/GlassContainer';
-import { MemoryCategory, MemoryItem, getMemories, updateMemory, deleteMemory } from '@/services/api/memory';
+import { MemoryCategory, MemoryItem, getMemories, updateMemory, deleteMemories } from '@/services/api/memory';
 import { CloseConfirmModal } from '@/components/common/CloseConfirmModal';
 import { ErrorModal } from '@/components/common/ErrorModal';
 import { useUserStore } from '@/store/userStore';
+import { useCreateStore } from '@/store/createStore';
 import { useSafeArea } from '@/hooks/useSafeArea';
 
 const CATEGORIES: MemoryCategory[] = ['人际关系', '偏好', '习惯', '临时'];
@@ -212,10 +213,10 @@ export default function MemoryEditScreen() {
     }
 
     try {
-      await deleteMemory(memory.id, userInfo.profileId, userInfo.token);
+      await deleteMemories([memory.id], userInfo.profileId, userInfo.token);
       setShowDeleteModal(false);
-      // 成功后返回记忆功能界面，并传递当前分类以便刷新
-      router.push({
+      // 成功后返回记忆功能界面，使用 replace 替换当前页面，避免左滑返回时回到已删除的编辑页面
+      router.replace({
         pathname: '/(customize)/memory',
         params: { category: currentCategory },
       });

@@ -7,6 +7,7 @@ import { useQuestionnaireStore } from '@/store/questionnaireStore';
 import { useCreateStore } from '@/store/createStore';
 import { useChatStore } from '@/store/chatStore';
 import { useAgreementStore } from '@/store/agreementStore';
+import { usePlanStore } from '@/store/planStore';
 import { UserProfile } from '@/components/settings/UserProfile';
 import { AccountSection } from '@/components/settings/AccountSection';
 import { PersonalInfoSection } from '@/components/settings/PersonalInfoSection';
@@ -24,7 +25,8 @@ export default function Settings() {
   const { resetAnswers } = useQuestionnaireStore();
   const { resetCreateState } = useCreateStore();
   const { resetChat } = useChatStore();
-  const { setAgreed } = useAgreementStore();
+  const { resetAgreement } = useAgreementStore();
+  const { resetPlan } = usePlanStore();
   const { getTopSpacing } = useSafeArea();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -58,23 +60,35 @@ export default function Settings() {
         // 清除本地数据（已经在内存中，不需要异步操作）
       // ]);
 
-      // 清除所有本地store数据
-      resetUserInfo();
-      resetAnswers();
-      resetCreateState();
-      resetChat();
-      setAgreed(false);
+      // 清除所有本地store数据（包括持久化存储）
+      console.log('[Logout] 开始清除所有账号相关数据...');
+      await Promise.all([
+        resetUserInfo(), // 清除用户数据（token, userId等）
+        resetCreateState(), // 清除AI相关数据
+        resetChat(), // 清除聊天数据
+        resetPlan(), // 清除计划数据
+        resetAgreement(), // 清除协议同意状态
+      ]);
+      resetAnswers(); // 清除问卷答案（不需要持久化，直接重置）
+      console.log('[Logout] 所有账号相关数据已清除');
 
       // 导航到软件启动页（welcome页面）
       router.replace('/(login)/welcome');
     } catch (error) {
       console.error('退出登录失败:', error);
       // 即使出错，也清除本地数据并跳转
-      resetUserInfo();
-      resetAnswers();
-      resetCreateState();
-      resetChat();
-      setAgreed(false);
+      try {
+        await Promise.all([
+          resetUserInfo(),
+          resetCreateState(),
+          resetChat(),
+          resetPlan(),
+          resetAgreement(),
+        ]);
+        resetAnswers();
+      } catch (clearError) {
+        console.error('[Logout] 清除数据时出错:', clearError);
+      }
       router.replace('/(login)/welcome');
     } finally {
       setIsLoggingOut(false);

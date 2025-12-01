@@ -8,8 +8,11 @@ import {
   getPlatformPublic, 
   getAppVersionPublic, 
   getOSVersionPublic, 
-  getSessionIdPublic 
+  getSessionIdPublic,
+  getNetworkTypePublic,
+  initTracking
 } from '@/services/tracking';
+import { generateUUID } from '@/utils/uuid';
 
 const BASE_URL = getApiBaseUrl();
 const REQUEST_TIMEOUT = 120000; // 2分钟超时（流式请求，图片消息需要更长时间）
@@ -25,6 +28,8 @@ export interface SendMessagePayload {
   prompt?: string; // 用户发送的消息（文本消息时使用）
   imageUrl?: string; // 用户发送的图片URL（图片消息时使用）
   conversationId?: string; // 对话ID，新会话为空，后续携带以保持上下文
+  pageId?: string; // 页面ID，用于埋点追踪（如 'chat_page'）
+  traceId?: string; // 追踪ID，用于追踪单次请求链路（如果不提供会自动生成）
 }
 
 /**
@@ -78,28 +83,40 @@ export async function sendMessageStream(
   console.log('[Chat] 请求:', { url, body: requestBody });
 
   try {
-    // 获取设备信息
+    // 获取设备信息（确保已初始化）
     const deviceId = getDeviceIdPublic();
+    const sessionId = getSessionIdPublic();
+    if (!deviceId || !sessionId) {
+      // 如果未初始化，自动初始化
+      initTracking();
+    }
+    
+    const finalDeviceId = getDeviceIdPublic();
     const platform = getPlatformPublic();
     const appVersion = getAppVersionPublic();
     const osVersion = getOSVersionPublic();
-    const sessionId = getSessionIdPublic();
+    const finalSessionId = getSessionIdPublic();
+    const networkType = getNetworkTypePublic();
+    
+    // 生成追踪ID（如果未提供则自动生成）
+    const traceId = payload.traceId || generateUUID();
+    // 页面ID（如果未提供则使用默认值）
+    const pageId = payload.pageId || 'chat_page';
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${payload.token}`,
-      'X-Device-Id': deviceId,
-      'X-Platform': platform,
-      'X-App-Version': appVersion,
+      'X-Device-Id': finalDeviceId, // getDeviceIdPublic() 总是返回 string（如果为空会自动生成）
+      'X-Platform': platform, // getPlatformPublic() 总是返回 'ios' | 'android'
+      'X-App-Version': appVersion, // getAppVersionPublic() 内部已有默认值 '1.0.0'
+      'X-OS-Version': osVersion || '', // getOSVersionPublic() 可能返回 undefined（Platform.Version 可能不存在）
+      'X-Session-Id': finalSessionId || '', // getSessionIdPublic() 可能返回 null（但已检查并初始化，理论上不会为空）
+      'X-Network-Type': networkType, // getNetworkTypePublic() 内部已有默认值 'unknown'
+      'X-Page-Id': pageId, // 页面ID，用于埋点追踪
+      'X-Trace-Id': traceId, // 追踪ID，用于追踪单次请求链路
     };
 
-    // 可选字段：只在有值时才添加
-    if (osVersion) {
-      headers['X-OS-Version'] = osVersion;
-    }
-    if (sessionId) {
-      headers['X-Session-Id'] = sessionId;
-    }
+    console.log('[Chat] 请求头:', headers);
 
     const response = await fetchWithTimeout(
       url,

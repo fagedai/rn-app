@@ -140,7 +140,6 @@ export default function LoginPhone() {
   }, [sending, countdown, localPhone, agreed, showErrorModal]);
 
   const handleLogin = useCallback(async () => {
-    router.replace('/(questionnaire)/name');
     if (!agreed) {
       showErrorModal('请先阅读并同意服务条款与隐私政策');
       return;
@@ -181,6 +180,9 @@ export default function LoginPhone() {
           const userInfoData = await getUserInfo(data.token);
           
           // 将获取到的用户信息映射到 userStore
+          if (userInfoData.mobile) {
+            setPhone(userInfoData.mobile); // 确保手机号从API获取并保存
+          }
           if (userInfoData.name) {
             setName(userInfoData.name);
           }
@@ -212,12 +214,13 @@ export default function LoginPhone() {
           }
         } catch (userInfoError) {
           console.error('[Phone] 获取用户信息失败:', userInfoError);
-          // 获取用户信息失败，默认跳转到问卷页面
-            router.replace('/(questionnaire)/name');
+          // 获取用户信息失败，保留在原页面并显示错误弹窗
+          const errorMessage = userInfoError instanceof Error ? userInfoError.message : '获取用户信息失败，请稍后重试';
+          showErrorModal(errorMessage, '登录失败');
         }
       } else {
-        // 没有 token，跳转到问卷页面
-        router.replace('/(questionnaire)/name');
+        // 没有 token，保留在原页面并显示错误弹窗
+        showErrorModal('登录失败，未获取到有效凭证，请稍后重试', '登录失败');
       }
     } catch (error) {
       console.error('验证验证码失败:', error);

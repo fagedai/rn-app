@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { GlassContainer } from '@/components/common/GlassContainer';
@@ -26,8 +27,9 @@ const MAX_LENGTH = 200;
 
 export default function MemoryAddScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const params = useLocalSearchParams<{ category?: MemoryCategory }>();
-  const { nestName } = useCreateStore();
+  const { nestName, aiNestName } = useCreateStore();
   const { userInfo } = useUserStore();
   const [category, setCategory] = useState<MemoryCategory>(
     (params.category as MemoryCategory) || '人际关系'
@@ -40,6 +42,9 @@ export default function MemoryAddScreen() {
   const [errorModalMessage, setErrorModalMessage] = useState('');
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const { bottom } = useSafeArea();
+  
+  // 使用 ref 跟踪是否有未保存的更改（用于 beforeRemove 监听器）
+  const hasUnsavedChangesRef = useRef(false);
   
   // 获取响应式样式
   const responsiveStyles = useMemo(() => {
@@ -97,13 +102,36 @@ export default function MemoryAddScreen() {
 
   useEffect(() => {
     setCharCount(text.length);
+    // 更新 ref，用于 beforeRemove 监听器
+    hasUnsavedChangesRef.current = text.trim().length > 0;
   }, [text]);
+
+  // 拦截返回操作（包括系统返回按钮、Android 左滑返回、iOS 滑动返回）
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      // 如果有未保存的内容，阻止返回并显示确认弹窗
+      const hasUnsaved = hasUnsavedChangesRef.current;
+      console.log('[MemoryAdd] beforeRemove 触发，hasUnsaved:', hasUnsaved);
+      
+      if (hasUnsaved) {
+        e.preventDefault(); // 阻止返回
+        console.log('[MemoryAdd] 阻止返回，显示确认弹窗');
+        // 显示确认弹窗
+        setShowCloseModal(true);
+      } else {
+        console.log('[MemoryAdd] 没有未保存内容，允许返回');
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   const handleSave = async () => {
     const trimmedText = text.trim();
     
     // 文本为空，直接返回
     if (!trimmedText) {
+      hasUnsavedChangesRef.current = false; // 清除未保存标记
       router.back();
       return;
     }
@@ -130,6 +158,9 @@ export default function MemoryAddScreen() {
       const { setLastCreatedMemory } = useCreateStore.getState();
       setLastCreatedMemory(trimmedText);
       
+      // 清除未保存标记，允许正常返回
+      hasUnsavedChangesRef.current = false;
+      
       // 成功后返回列表页
       router.back();
     } catch (error) {
@@ -144,12 +175,16 @@ export default function MemoryAddScreen() {
     if (text.trim().length > 0) {
       setShowCloseModal(true);
     } else {
+      // 没有未保存内容，清除标记并直接返回
+      hasUnsavedChangesRef.current = false;
       router.back();
     }
   };
 
   const handleConfirmClose = () => {
     setShowCloseModal(false);
+    // 清除未保存标记，允许正常返回
+    hasUnsavedChangesRef.current = false;
     router.back();
   };
 
@@ -244,7 +279,7 @@ export default function MemoryAddScreen() {
                       setText(value);
                     }
                   }}
-                  placeholder={`定制${nestName}的记忆，例如，${nestName}曾和你一起...`}
+                  placeholder={`定制${nestName || aiNestName || 'NEST'}的记忆，例如，${nestName || aiNestName || 'NEST'}曾和你一起...`}
                   placeholderTextColor="rgba(255, 255, 255, 0.5)"
                   multiline
                   maxLength={MAX_LENGTH}

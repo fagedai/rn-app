@@ -3,6 +3,16 @@
  */
 
 import { fetchWithTimeout, getApiBaseUrl } from '@/utils/apiUtils';
+import { 
+  getDeviceIdPublic, 
+  getPlatformPublic, 
+  getAppVersionPublic, 
+  getOSVersionPublic, 
+  getSessionIdPublic,
+  getNetworkTypePublic,
+  initTracking
+} from '@/services/tracking';
+import { generateUUID } from '@/utils/uuid';
 
 const BASE_URL = getApiBaseUrl();
 const REQUEST_TIMEOUT = 30000; // 30秒超时
@@ -65,17 +75,55 @@ export interface UpdateUserInfoRequest {
 export async function getUserInfo(token: string): Promise<UserInfoResponse> {
   const url = `${BASE_URL}/users/me`;
 
-  console.log('[User] 请求:', { url });
+  // 验证 token 是否存在，并清理空白字符
+  if (!token || token.trim() === '') {
+    throw new Error('请先登录');
+  }
+
+  // 清理 token 中的空白字符（包括换行符、空格等）
+  const cleanToken = token.trim().replace(/\s+/g, '');
+  
+  console.log('[User] 请求:', { 
+    url, 
+    hasToken: !!token, 
+    tokenLength: token.length,
+    cleanTokenLength: cleanToken.length,
+    tokenPrefix: cleanToken ? `${cleanToken.substring(0, 20)}...` : '无token'
+  });
 
   try {
+    // 获取设备信息（确保已初始化）
+    const deviceId = getDeviceIdPublic();
+    const sessionId = getSessionIdPublic();
+    if (!deviceId || !sessionId) {
+      initTracking();
+    }
+    
+    const finalDeviceId = getDeviceIdPublic();
+    const platform = getPlatformPublic();
+    const appVersion = getAppVersionPublic();
+    const osVersion = getOSVersionPublic();
+    const finalSessionId = getSessionIdPublic();
+    const networkType = getNetworkTypePublic();
+
+    // GET 请求不需要 Content-Type，但需要追踪头
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${cleanToken}`,
+      'X-Device-Id': finalDeviceId,
+      'X-Platform': platform,
+      'X-App-Version': appVersion,
+      'X-OS-Version': osVersion || '',
+      'X-Session-Id': finalSessionId || '',
+      'X-Network-Type': networkType,
+      'X-Page-Id': 'user_info_page', // 用户信息页面
+      'X-Trace-Id': generateUUID(), // 每次请求生成新的追踪ID
+    };
+
     const response = await fetchWithTimeout(
       url,
       {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+        headers,
       },
       REQUEST_TIMEOUT
     );
@@ -89,7 +137,7 @@ export async function getUserInfo(token: string): Promise<UserInfoResponse> {
     } catch {
       // 如果不是 JSON 格式，检查 HTTP 状态码
       if (!response.ok) {
-        console.log('[User] 响应:', responseText);
+        console.log('[User] 响应解析失败，HTTP状态码:', response.status);
         throw new Error(responseText || '获取用户信息失败');
       }
       throw new Error('获取用户信息失败：响应格式错误');
@@ -97,10 +145,12 @@ export async function getUserInfo(token: string): Promise<UserInfoResponse> {
 
     // 检查后端返回的 code 字段（code: 0 或 code: 200 表示成功）
     if (responseData && typeof responseData === 'object' && 'code' in responseData) {
+      console.log('[User] 响应 code:', responseData.code, 'message:', responseData.message);
       // 兼容两种成功码：0 或 200
       const isSuccess = responseData.code === 0 || responseData.code === 200;
       if (!isSuccess) {
         const errorMessage = responseData.message || responseText || '获取用户信息失败';
+        console.error('[User] 请求失败:', { code: responseData.code, message: errorMessage });
         throw new Error(errorMessage);
       }
 
@@ -120,7 +170,7 @@ export async function getUserInfo(token: string): Promise<UserInfoResponse> {
                 day: date.getDate(),
               };
             }
-          } catch (e) {
+          } catch {
             // 静默处理生日解析失败
           }
         }
@@ -179,14 +229,38 @@ export async function updateUserInfo(
   console.log('[User] 请求:', { url, data });
 
   try {
+    // 获取设备信息（确保已初始化）
+    const deviceId = getDeviceIdPublic();
+    const sessionId = getSessionIdPublic();
+    if (!deviceId || !sessionId) {
+      initTracking();
+    }
+    
+    const finalDeviceId = getDeviceIdPublic();
+    const platform = getPlatformPublic();
+    const appVersion = getAppVersionPublic();
+    const osVersion = getOSVersionPublic();
+    const finalSessionId = getSessionIdPublic();
+    const networkType = getNetworkTypePublic();
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      'X-Device-Id': finalDeviceId,
+      'X-Platform': platform,
+      'X-App-Version': appVersion,
+      'X-OS-Version': osVersion || '',
+      'X-Session-Id': finalSessionId || '',
+      'X-Network-Type': networkType,
+      'X-Page-Id': 'user_info_page', // 用户信息页面
+      'X-Trace-Id': generateUUID(), // 每次请求生成新的追踪ID
+    };
+
     const response = await fetchWithTimeout(
       url,
       {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+        headers,
         body: JSON.stringify(data),
       },
       REQUEST_TIMEOUT
@@ -258,14 +332,38 @@ export async function sendChangePhoneCode(mobile: string, token: string): Promis
   console.log('[User] 请求发送修改手机号验证码:', { url, mobile });
 
   try {
+    // 获取设备信息（确保已初始化）
+    const deviceId = getDeviceIdPublic();
+    const sessionId = getSessionIdPublic();
+    if (!deviceId || !sessionId) {
+      initTracking();
+    }
+    
+    const finalDeviceId = getDeviceIdPublic();
+    const platform = getPlatformPublic();
+    const appVersion = getAppVersionPublic();
+    const osVersion = getOSVersionPublic();
+    const finalSessionId = getSessionIdPublic();
+    const networkType = getNetworkTypePublic();
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      'X-Device-Id': finalDeviceId,
+      'X-Platform': platform,
+      'X-App-Version': appVersion,
+      'X-OS-Version': osVersion || '',
+      'X-Session-Id': finalSessionId || '',
+      'X-Network-Type': networkType,
+      'X-Page-Id': 'user_settings_page', // 用户设置页面
+      'X-Trace-Id': generateUUID(), // 每次请求生成新的追踪ID
+    };
+
     const response = await fetchWithTimeout(
       url,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+        headers,
       },
       REQUEST_TIMEOUT
     );
@@ -341,14 +439,38 @@ export async function confirmChangePhone(mobile: string, token: string, code?: s
   console.log('[User] 请求确认修改手机号:', { url, mobile, code });
 
   try {
+    // 获取设备信息（确保已初始化）
+    const deviceId = getDeviceIdPublic();
+    const sessionId = getSessionIdPublic();
+    if (!deviceId || !sessionId) {
+      initTracking();
+    }
+    
+    const finalDeviceId = getDeviceIdPublic();
+    const platform = getPlatformPublic();
+    const appVersion = getAppVersionPublic();
+    const osVersion = getOSVersionPublic();
+    const finalSessionId = getSessionIdPublic();
+    const networkType = getNetworkTypePublic();
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      'X-Device-Id': finalDeviceId,
+      'X-Platform': platform,
+      'X-App-Version': appVersion,
+      'X-OS-Version': osVersion || '',
+      'X-Session-Id': finalSessionId || '',
+      'X-Network-Type': networkType,
+      'X-Page-Id': 'user_settings_page', // 用户设置页面
+      'X-Trace-Id': generateUUID(), // 每次请求生成新的追踪ID
+    };
+
     const response = await fetchWithTimeout(
       url,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
+        headers,
       },
       REQUEST_TIMEOUT
     );

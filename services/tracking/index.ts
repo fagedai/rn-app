@@ -28,6 +28,11 @@ let sessionStartTime: number = Date.now();
 const DEVICE_ID_KEY = '@nest_device_id';
 let deviceId: string | null = null;
 
+// 网络类型缓存（定期更新）
+let cachedNetworkType: string | undefined = undefined;
+let networkTypeCacheTime: number = 0;
+const NETWORK_TYPE_CACHE_DURATION = 5000; // 缓存5秒
+
 /**
  * 初始化 Session ID（App 启动时调用）
  */
@@ -42,6 +47,11 @@ export function initTracking() {
     // TODO: 从 AsyncStorage 读取，如果没有则生成并保存
     deviceId = generateUUID();
   }
+  
+  // 初始化网络类型（异步，不阻塞）
+  initNetworkType().catch(() => {
+    // 静默处理错误
+  });
   
   if (DEBUG_TRACKING) {
     console.log('[Tracking] 初始化:', { sessionId, deviceId });
@@ -95,18 +105,96 @@ async function getOSVersion(): Promise<string | undefined> {
 }
 
 /**
- * 获取网络类型
+ * 获取网络类型（异步，用于埋点）
  */
 async function getNetworkType(): Promise<string | undefined> {
   try {
-    // 需要安装 expo-network 包
-    // const Network = await import('expo-network');
-    // const state = await Network.getNetworkStateAsync();
-    // return state.type === Network.NetworkStateType.WIFI ? 'wifi' : 
-    //        state.type === Network.NetworkStateType.CELLULAR ? '4g' : 'none';
-    return undefined; // 暂时不实现
-  } catch {
+    const Network = await import('expo-network');
+    const state = await Network.getNetworkStateAsync();
+    
+    // 调试日志：查看实际返回的网络状态
+    if (DEBUG_TRACKING) {
+      console.log('[Tracking] 网络状态:', {
+        isConnected: state.isConnected,
+        type: state.type,
+        isInternetReachable: state.isInternetReachable,
+      });
+    }
+    
+    // 更新缓存
+    const networkType = getNetworkTypeFromState(state);
+    cachedNetworkType = networkType;
+    networkTypeCacheTime = Date.now();
+    
+    if (DEBUG_TRACKING) {
+      console.log('[Tracking] 解析后的网络类型:', networkType);
+    }
+    
+    return networkType;
+  } catch (error) {
+    console.warn('[Tracking] 获取网络类型失败:', error);
     return undefined;
+  }
+}
+
+/**
+ * 从网络状态对象中提取网络类型字符串
+ */
+function getNetworkTypeFromState(state: { isConnected: boolean; type: number }): string | undefined {
+  if (!state.isConnected) {
+    return 'none';
+  }
+  
+  // expo-network 的 NetworkStateType 枚举值
+  // WIFI = 2, CELLULAR = 1, ETHERNET = 3, UNKNOWN = 0
+  const NetworkStateType = {
+    UNKNOWN: 0,
+    CELLULAR: 1,
+    WIFI: 2,
+    ETHERNET: 3,
+  };
+  
+  if (state.type === NetworkStateType.WIFI) {
+    return 'wifi';
+  } else if (state.type === NetworkStateType.CELLULAR) {
+    return 'cellular';
+  } else if (state.type === NetworkStateType.ETHERNET) {
+    return 'ethernet';
+  } else if (state.type === NetworkStateType.UNKNOWN) {
+    return 'unknown';
+  }
+  
+  return 'unknown';
+}
+
+/**
+ * 获取网络类型（同步版本，用于API请求头）
+ * 使用缓存机制，避免每次请求都异步获取
+ */
+export function getNetworkTypePublic(): string {
+  // 如果缓存有效，直接返回
+  const now = Date.now();
+  if (cachedNetworkType !== undefined && (now - networkTypeCacheTime) < NETWORK_TYPE_CACHE_DURATION) {
+    return cachedNetworkType;
+  }
+  
+  // 缓存过期或不存在，异步更新（不阻塞当前请求）
+  getNetworkType().catch(() => {
+    // 静默处理错误
+  });
+  
+  // 返回缓存值或默认值
+  return cachedNetworkType || 'unknown';
+}
+
+/**
+ * 初始化网络类型（在应用启动时调用）
+ */
+export async function initNetworkType(): Promise<void> {
+  try {
+    await getNetworkType();
+  } catch (error) {
+    console.warn('[Tracking] 初始化网络类型失败:', error);
   }
 }
 

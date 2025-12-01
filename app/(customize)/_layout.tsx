@@ -3,7 +3,7 @@ import React from 'react';
 
 export default function CustomizeLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack screenOptions={{ headerShown: false, gestureEnabled: true }}>
       <Stack.Screen 
         name="customize" 
         options={{ headerShown: true, headerTransparent: true }}
@@ -11,8 +11,8 @@ export default function CustomizeLayout() {
       <Stack.Screen name="text-editor" />
       <Stack.Screen name="voice" />
       <Stack.Screen name="memory" />
-      <Stack.Screen name="memory-add" />
-      <Stack.Screen name="memory-edit" />
+      <Stack.Screen name="memory-add" options={{ gestureEnabled: true }} />
+      <Stack.Screen name="memory-edit" options={{ gestureEnabled: true }} />
       <Stack.Screen name="memory-edit-list" />
       <Stack.Screen name="edit-nest-name" />
       <Stack.Screen name="edit-nest-gender" />

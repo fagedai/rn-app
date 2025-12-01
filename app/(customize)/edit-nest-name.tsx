@@ -18,13 +18,12 @@ const HEADER_HEIGHT = 44; // LoginHeader 高度
 export default function EditnestName() {
   const router = useRouter();
   const { top } = useSafeArea();
-  const { nestName, setnestName } = useCreateStore();
+  const { aiNestName, setnestName, setNestName } = useCreateStore();
   const { userInfo } = useUserStore();
-  const [name, setName] = useState(nestName || '');
+  const [name, setName] = useState(aiNestName || '');
   const [loading, setLoading] = useState(false);
   const errorModal = useErrorModal();
   const inputRef = useRef<TextInput>(null);
-  const [hasUserCleared, setHasUserCleared] = useState(false);
 
   // 验证AI名字：仅支持英文字母，长度1-8
   const validatenestName = (name: string): { valid: boolean; error?: string } => {
@@ -50,19 +49,6 @@ export default function EditnestName() {
     // 限制长度最多8位
     const limitedText = filteredText.slice(0, 8);
     setName(limitedText);
-    
-    if (!limitedText) {
-      setHasUserCleared(true);
-      if (inputRef.current) {
-        setTimeout(() => {
-          inputRef.current?.setNativeProps({
-            selection: { start: 0, end: 0 },
-          });
-        }, 10);
-      }
-    } else {
-      setHasUserCleared(false);
-    }
   };
 
   // 处理保存
@@ -81,7 +67,7 @@ export default function EditnestName() {
     const trimmedName = name.trim();
     
     // 如果名字没有变化，直接返回
-    if (trimmedName === nestName) {
+    if (trimmedName === aiNestName) {
       router.back();
       return;
     }
@@ -98,13 +84,14 @@ export default function EditnestName() {
       
       await Promise.all([savePromise, minDelayPromise]);
       
-      // 更新本地store
+      // 更新本地store（同时更新 aiNestName 和 nestName）
       setnestName(trimmedName);
+      setNestName(trimmedName); // 更新从API获取的名字，确保定制AI页面显示最新值
       
       // 机器人设定修改埋点
       track('bot_settings_update', {
         field: 'nest_name',
-        old_value: nestName,
+        old_value: aiNestName,
         new_value: trimmedName,
         bot_id: userInfo.profileId || '',
       }, {
@@ -171,21 +158,6 @@ export default function EditnestName() {
                     position: 'relative',
                   }}
                 >
-                  {/* 自定义 placeholder */}
-                  {!name && hasUserCleared && (
-                    <Text
-                      style={{
-                        position: 'absolute',
-                        width: '100%',
-                        textAlign: 'center',
-                        fontSize: 16,
-                        color: '#D9D8E9',
-                        pointerEvents: 'none',
-                      }}
-                    >
-                      {nestName || '请输入NEST名字'}
-                    </Text>
-                  )}
                   <TextInput
                     ref={inputRef}
                     style={{
@@ -197,7 +169,7 @@ export default function EditnestName() {
                     }}
                     value={name}
                     onChangeText={handleTextChange}
-                    placeholder={nestName || '请输入NEST名字'}
+                    placeholder={'请输入NEST名字'}
                     placeholderTextColor="#D9D8E9"
                     selectionColor="#9EA9FF"
                     autoCorrect={false}

@@ -1,5 +1,8 @@
 import { create } from 'zustand';
-import { generateUUID } from '@/utils/uuid';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// AsyncStorage 存储键名
+const STORAGE_KEY = 'chat_store';
 
 /**
  * 消息类型
@@ -81,12 +84,48 @@ interface ChatState {
   setStreamingMessageId: (messageId: string | null) => void;
   setPagination: (sessionId: string, pagination: { page: number; hasMore: boolean; loading: boolean }) => void;
   resetChat: () => void;
+  initializeFromStorage: () => Promise<void>; // 从持久化存储恢复
+  saveToStorageImmediate: () => void; // 立即保存到持久化存储（用于APP进入后台时）
 }
 
-const initialPagination = {
-  page: 1,
-  hasMore: true,
-  loading: false,
+// 保存到持久化存储（防抖）
+let saveTimeout: NodeJS.Timeout | null = null;
+const saveToStorage = (get: () => ChatState, immediate = false) => {
+  if (saveTimeout && !immediate) {
+    clearTimeout(saveTimeout);
+  }
+  
+  const performSave = async () => {
+    try {
+      const state = get();
+      const dataToSave = {
+        currentSessionId: state.currentSessionId,
+        currentAgentId: state.currentAgentId,
+        conversationId: state.conversationId,
+        messages: state.messages,
+        sessions: state.sessions,
+        isFromHistory: state.isFromHistory,
+        greetingMessage: state.greetingMessage,
+        pagination: state.pagination,
+      };
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+      console.log('[ChatStore] 聊天数据已保存到持久化存储');
+    } catch (error) {
+      console.error('[ChatStore] 保存到持久化存储失败:', error);
+    }
+  };
+
+  if (immediate) {
+    // 立即保存（用于APP进入后台时）
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+      saveTimeout = null;
+    }
+    performSave();
+  } else {
+    // 防抖保存（正常情况）
+    saveTimeout = setTimeout(performSave, 1000); // 1秒防抖，因为聊天数据可能较大
+  }
 };
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -100,22 +139,30 @@ export const useChatStore = create<ChatState>((set, get) => ({
   streamingMessageId: null,
   pagination: {},
   
-  setCurrentSession: (sessionId, agentId) =>
+  setCurrentSession: (sessionId, agentId) => {
     set({
       currentSessionId: sessionId,
       currentAgentId: agentId,
-    }),
+    });
+    saveToStorage(get);
+  },
   
-  setConversationId: (conversationId) =>
-    set({ conversationId }),
+  setConversationId: (conversationId) => {
+    set({ conversationId });
+    saveToStorage(get);
+  },
   
-  setFromHistory: (isFromHistory) =>
-    set({ isFromHistory }),
+  setFromHistory: (isFromHistory) => {
+    set({ isFromHistory });
+    saveToStorage(get);
+  },
   
-  setGreetingMessage: (message) =>
-    set({ greetingMessage: message }),
+  setGreetingMessage: (message) => {
+    set({ greetingMessage: message });
+    saveToStorage(get);
+  },
   
-  addMessage: (sessionId, message) =>
+  addMessage: (sessionId, message) => {
     set((state) => {
       const sessionMessages = state.messages[sessionId] || [];
       // 检查是否已存在（去重）
@@ -129,9 +176,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
           [sessionId]: [...sessionMessages, message],
         },
       };
-    }),
+    });
+    saveToStorage(get);
+  },
   
-  updateMessage: (sessionId, messageId, updates) =>
+  updateMessage: (sessionId, messageId, updates) => {
     set((state) => {
       const sessionMessages = state.messages[sessionId] || [];
       return {
@@ -142,17 +191,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
           ),
         },
       };
-    }),
+    });
+    saveToStorage(get);
+  },
   
-  setMessages: (sessionId, messages) =>
+  setMessages: (sessionId, messages) => {
     set((state) => ({
       messages: {
         ...state.messages,
         [sessionId]: messages,
       },
-    })),
+    }));
+    saveToStorage(get);
+  },
   
-  appendMessages: (sessionId, messages) =>
+  appendMessages: (sessionId, messages) => {
     set((state) => {
       const existingMessages = state.messages[sessionId] || [];
       // 去重
@@ -165,9 +218,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
           [sessionId]: [...newMessages, ...existingMessages],
         },
       };
-    }),
+    });
+    saveToStorage(get);
+  },
   
-  addSession: (session) =>
+  addSession: (session) => {
     set((state) => {
       const exists = state.sessions.some((s) => s.session_id === session.session_id);
       if (exists) {
@@ -176,27 +231,33 @@ export const useChatStore = create<ChatState>((set, get) => ({
       return {
         sessions: [session, ...state.sessions],
       };
-    }),
+    });
+    saveToStorage(get);
+  },
   
-  updateSession: (sessionId, updates) =>
+  updateSession: (sessionId, updates) => {
     set((state) => ({
       sessions: state.sessions.map((s) =>
         s.session_id === sessionId ? { ...s, ...updates } : s
       ),
-    })),
+    }));
+    saveToStorage(get);
+  },
   
   setStreamingMessageId: (messageId) =>
     set({ streamingMessageId: messageId }),
   
-  setPagination: (sessionId, pagination) =>
+  setPagination: (sessionId, pagination) => {
     set((state) => ({
       pagination: {
         ...state.pagination,
         [sessionId]: pagination,
       },
-    })),
+    }));
+    saveToStorage(get);
+  },
   
-  resetChat: () =>
+  resetChat: async () => {
     set({
       currentSessionId: null,
       currentAgentId: null,
@@ -207,6 +268,38 @@ export const useChatStore = create<ChatState>((set, get) => ({
       greetingMessage: null,
       streamingMessageId: null,
       pagination: {},
-    }),
+    });
+    await AsyncStorage.removeItem(STORAGE_KEY);
+    console.log('[ChatStore] 已清除所有聊天数据');
+  },
+  initializeFromStorage: async () => {
+    try {
+      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        set({
+          currentSessionId: parsed.currentSessionId || null,
+          currentAgentId: parsed.currentAgentId || null,
+          conversationId: parsed.conversationId || null,
+          messages: parsed.messages || {},
+          sessions: parsed.sessions || [],
+          isFromHistory: parsed.isFromHistory || false,
+          greetingMessage: parsed.greetingMessage || null,
+          streamingMessageId: null, // 不恢复流式状态
+          pagination: parsed.pagination || {},
+        });
+        console.log('[ChatStore] 从持久化存储恢复数据:', {
+          hasMessages: Object.keys(parsed.messages || {}).length > 0,
+          currentSessionId: parsed.currentSessionId,
+          sessionsCount: (parsed.sessions || []).length,
+        });
+      }
+    } catch (error) {
+      console.error('[ChatStore] 从持久化存储恢复失败:', error);
+    }
+  },
+  saveToStorageImmediate: () => {
+    saveToStorage(get, true);
+  },
 }));
 

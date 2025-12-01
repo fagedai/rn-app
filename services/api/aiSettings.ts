@@ -224,6 +224,7 @@ export async function savenestName(nestName: string, userId: string | number, to
 export interface NestInfoResponse {
   profile_id: string;
   nest_name: string | null;
+  nest_gender: 1 | 2 | 3 | null; // 1=男, 2=女, 3=不愿意透露
   nest_relationship: string | null;
   nest_last_memory: string | null;
   nest_backstory: string | null;
