@@ -168,7 +168,6 @@ export default function LoginMain() {
           // 埋点：用户在授权页点击其他方式登录
           track('click_sms_login', {
             from_page: 'one_tap_auth_page', // 从授权页切换
-            switch_from_auth: true, // 标记是从授权页切换的
           });
           
           setLoading(false);

@@ -293,25 +293,12 @@ export default function Q8RoleTypeSelection() {
     try {
       setIsSubmitting(true);
       
-      // 问卷提交埋点（提交前）
-      track('questionnaire_submit', {
-        question_count: 7, // 问卷总题数
-        has_archetype: !!submitData.aiRoleType,
-      }, {
-        page_id: 'questionnaire_role_type',
-      });
+      // 问卷提交埋点已移除，使用后端事件 questionnaire_submit_result
       
       // 提交问卷，获取 profileId
       const profileId = await submitQuestionnaire(questionnaireData, userInfo.token);
       
-      // 机器人创建成功埋点
-      track('bot_create_result', {
-        bot_id: profileId,
-        result: 'success',
-        has_archetype: !!submitData.aiRoleType,
-      }, {
-        page_id: 'questionnaire_role_type',
-      });
+      // 机器人创建成功埋点已移除，使用后端事件 bot_create_result
       
       // 保存 profileId 到 store
       const { setProfileId } = useUserStore.getState();
@@ -326,13 +313,7 @@ export default function Q8RoleTypeSelection() {
       console.error('提交问卷失败:', err);
       const errorMessage = err instanceof Error ? err.message : '提交失败，请稍后重试';
       
-      // 机器人创建失败埋点
-      track('bot_create_result', {
-        result: 'failed',
-        error_message: errorMessage,
-      }, {
-        page_id: 'questionnaire_role_type',
-      });
+      // 机器人创建失败埋点已移除，使用后端事件 bot_create_result
       
       setError(errorMessage);
       setShowErrorModal(true);

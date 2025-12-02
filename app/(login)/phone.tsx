@@ -88,7 +88,7 @@ export default function LoginPhone() {
   useEffect(() => {
     const fromPage = params.from || 'login_page';
     
-    track('page_view_sms_login', {
+    track('page_view_login', {
       from_page: fromPage,
     }, {
       page_id: 'sms_login_page',

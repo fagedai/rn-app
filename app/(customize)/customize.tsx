@@ -125,11 +125,10 @@ export default function CustomizeAI() {
         pendingRelationshipRef.current = null;
         
         // 机器人设定修改埋点
-        track('bot_settings_update', {
-          field: 'nest_relationship',
-          old_value: oldRelationship,
-          new_value: relationshipToSave,
-          bot_id: userInfo.profileId || '',
+        track('bot_profile_edit', {
+          field_name: 'nest_relationship',
+          old_value_length: oldRelationship ? oldRelationship.length : 0,
+          new_value_length: relationshipToSave ? relationshipToSave.length : 0,
         }, {
           page_id: 'customize_page',
         });
@@ -154,9 +153,7 @@ export default function CustomizeAI() {
   useFocusEffect(
     useCallback(() => {
       // 机器人设定页曝光埋点
-      track('page_view_customize', {
-        bot_id: userInfo.profileId || '',
-      }, {
+        track('page_view_bot_setup', {}, {
         page_id: 'customize_page',
       });
 

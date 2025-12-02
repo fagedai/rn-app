@@ -7,7 +7,51 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { generateUUID } from '@/utils/uuid';
 import { useUserStore } from '@/store/userStore';
-import { supabase, TRACKING_EVENTS_TABLE, isSupabaseConfigured } from '@/services/supabase';
+import { supabase, isSupabaseConfigured } from '@/services/supabase';
+
+/**
+ * 事件名到表名的映射
+ * 每个事件对应一张独立的表
+ */
+/**
+ * 事件名到表名的映射（仅前端事件）
+ * 每个事件对应一张独立的表
+ */
+const EVENT_TABLE_MAP: Record<string, string> = {
+  // App 启动与前后台切换
+  'app_launch': 'app_launch',
+  
+  // 登录/注册流程
+  'page_view_login': 'page_view_login',
+  'click_one_tap_login': 'click_one_tap_login',
+  'click_sms_login': 'click_sms_login',
+  
+  // 问卷 & 用户画像
+  'page_view_questionnaire': 'page_view_questionnaire',
+  'question_view': 'question_view',
+  'question_answer': 'question_answer',
+  
+  // 机器人创建 & 训练
+  'page_view_bot_setup': 'page_view_bot_setup',
+  'bot_profile_edit': 'bot_profile_edit',
+  'click_bot_create': 'click_bot_create',
+  
+  // 聊天对话
+  'page_view_chat': 'page_view_chat',
+  'chat_message_send': 'chat_message_send',
+  'chat_reply_show': 'chat_reply_show',
+  
+  // 设置 & 用户信息
+  'page_view_settings': 'page_view_settings',
+  'user_profile_edit': 'user_profile_edit',
+};
+
+/**
+ * 根据事件名获取对应的表名
+ */
+function getTableName(eventName: string): string {
+  return EVENT_TABLE_MAP[eventName] || `event_${eventName}`;
+}
 
 // 动态导入可选依赖
 let Application: { nativeApplicationVersion?: string } | null = null;
@@ -139,14 +183,40 @@ async function getNetworkType(): Promise<string | undefined> {
 
 /**
  * 从网络状态对象中提取网络类型字符串
+ * 注意：expo-network 的 type 可能是数字或字符串
  */
-function getNetworkTypeFromState(state: { isConnected: boolean; type: number }): string | undefined {
+function getNetworkTypeFromState(state: { isConnected?: boolean; type?: number | string }): string | undefined {
   if (!state.isConnected) {
     return 'none';
   }
   
+  // 如果 type 不存在，返回 unknown
+  if (state.type === undefined) {
+    return 'unknown';
+  }
+  
   // expo-network 的 NetworkStateType 枚举值
   // WIFI = 2, CELLULAR = 1, ETHERNET = 3, UNKNOWN = 0
+  // 但实际返回的可能是字符串 "WIFI", "CELLULAR" 等
+  const type = state.type;
+  
+  // 如果是字符串类型，直接转换为小写
+  if (typeof type === 'string') {
+    const lowerType = type.toLowerCase();
+    if (lowerType === 'wifi') {
+      return 'wifi';
+    } else if (lowerType === 'cellular' || lowerType === 'cell') {
+      return 'cellular';
+    } else if (lowerType === 'ethernet') {
+      return 'ethernet';
+    } else if (lowerType === 'unknown' || lowerType === 'none') {
+      return 'unknown';
+    }
+    // 如果是不认识的字符串，返回 unknown
+    return 'unknown';
+  }
+  
+  // 如果是数字类型，使用原来的逻辑
   const NetworkStateType = {
     UNKNOWN: 0,
     CELLULAR: 1,
@@ -154,13 +224,13 @@ function getNetworkTypeFromState(state: { isConnected: boolean; type: number }):
     ETHERNET: 3,
   };
   
-  if (state.type === NetworkStateType.WIFI) {
+  if (type === NetworkStateType.WIFI) {
     return 'wifi';
-  } else if (state.type === NetworkStateType.CELLULAR) {
+  } else if (type === NetworkStateType.CELLULAR) {
     return 'cellular';
-  } else if (state.type === NetworkStateType.ETHERNET) {
+  } else if (type === NetworkStateType.ETHERNET) {
     return 'ethernet';
-  } else if (state.type === NetworkStateType.UNKNOWN) {
+  } else if (type === NetworkStateType.UNKNOWN) {
     return 'unknown';
   }
   
@@ -224,46 +294,23 @@ export interface TrackingEvent extends CommonTrackingFields {
 }
 
 /**
- * 分离公共字段和业务字段
- * 公共字段作为表字段，业务字段合并到 properties JSONB 字段
+ * 准备事件数据，所有字段（公共字段 + 业务字段）都直接作为表列插入
+ * 注意：event_name 需要保留，因为数据库表要求 event_name 为 not null
  */
-function separateFields(event: TrackingEvent): {
-  tableFields: Record<string, unknown>;
-  properties: Record<string, unknown>;
-} {
-  // 公共字段列表（这些字段会作为表字段）
-  const commonFieldNames = [
-    'event_id',
-    'event_name',
-    'event_time',
-    'user_id',
-    'device_id',
-    'platform',
-    'app_version',
-    'os_version',
-    'network_type',
-    'page_id',
-    'trace_id',
-    'session_id',
-  ];
-
-  const tableFields: Record<string, unknown> = {};
-  const properties: Record<string, unknown> = {};
-
-  // 分离字段
+function prepareEventData(event: TrackingEvent): Record<string, unknown> {
+  const data: Record<string, unknown> = {};
+  
+  // 复制所有字段（包括 event_name，因为表结构要求 event_name 为必填）
   Object.keys(event).forEach((key) => {
-    if (commonFieldNames.includes(key)) {
-      tableFields[key] = event[key];
-    } else {
-      properties[key] = event[key];
-    }
+    data[key] = event[key];
   });
-
-  return { tableFields, properties };
+  
+  return data;
 }
 
 /**
  * 上报埋点数据到 Supabase 数据库
+ * 根据事件名选择对应的表，所有字段直接作为表列插入
  */
 async function sendTrackingEvent(event: TrackingEvent): Promise<void> {
   try {
@@ -280,27 +327,25 @@ async function sendTrackingEvent(event: TrackingEvent): Promise<void> {
       return;
     }
 
-    // 分离公共字段和业务字段
-    const { tableFields, properties } = separateFields(event);
+    // 根据事件名获取对应的表名
+    const tableName = getTableName(event.event_name);
+    
+    // 准备插入数据（移除 event_name，因为表名已经代表事件类型）
+    const insertData = prepareEventData(event);
 
-    // 构建插入数据
-    const insertData = {
-      ...tableFields,
-      properties: properties, // 业务字段合并到 properties JSONB 字段
-    };
-
-    // 插入到 Supabase 数据库
-    // 注意：Supabase JS 客户端会自动使用创建时传入的 key 对应的角色
-    // 如果使用 anon key，则使用 anon 角色；如果使用 service_role key，则使用 service_role 角色
-    // 使用 returning: 'minimal' 避免 RLS 策略不允许 SELECT 时的错误
-    const { data, error } = await supabase
-      .from(TRACKING_EVENTS_TABLE)
-      .insert([insertData], { returning: 'minimal' });
+    // 插入到对应的表（使用 log schema）
+    // 注意：不返回数据，避免 RLS 策略不允许 SELECT 时的错误
+    const { error } = await supabase
+      .schema('log')
+      .from(tableName)
+      .insert([insertData]);
 
     if (error) {
       // 插入失败，记录错误但不影响主流程
       if (DEBUG_TRACKING) {
         console.error('[Tracking] 插入失败:', error);
+        console.error('[Tracking] 事件名:', event.event_name);
+        console.error('[Tracking] 表名:', tableName);
         console.error('[Tracking] 错误代码:', error.code);
         console.error('[Tracking] 错误消息:', error.message);
         console.error('[Tracking] 错误详情:', error.details);
@@ -339,8 +384,8 @@ async function sendTrackingEvent(event: TrackingEvent): Promise<void> {
     }
 
     // 插入成功
-    if (DEBUG_TRACKING && data) {
-      console.log('[Tracking] 插入成功:', data[0]?.id);
+    if (DEBUG_TRACKING) {
+      console.log('[Tracking] 插入成功:', { table: tableName, event: event.event_name });
     }
   } catch (error) {
     // 埋点失败不影响主流程，静默处理

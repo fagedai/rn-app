@@ -106,18 +106,16 @@ export default function EditNestGender() {
         userInfo.token
       );
       const minDelayPromise = new Promise(resolve => setTimeout(resolve, 1000));
-      
       await Promise.all([savePromise, minDelayPromise]);
       
       // 更新本地store
       setAiGender(genderCode);
       
       // 机器人设定修改埋点
-      track('bot_settings_update', {
-        field: 'nest_gender',
-        old_value: aiGender,
-        new_value: genderCode,
-        bot_id: userInfo.profileId || '',
+      track('bot_profile_edit', {
+        field_name: 'bot_gender',
+        old_value_length: aiGender ? String(aiGender).length : 0,
+        new_value_length: String(genderCode).length,
       }, {
         page_id: 'edit_nest_gender',
       });

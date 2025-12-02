@@ -86,10 +86,10 @@ export default function EditGender() {
       setGender(genderCode);
       
       // 用户信息修改埋点
-      track('user_info_update', {
-        field: 'gender',
-        old_value: userInfo.gender,
-        new_value: genderCode,
+      track('user_profile_edit', {
+        field_name: 'user_gender',
+        old_value_length: userInfo.gender ? String(userInfo.gender).length : 0,
+        new_value_length: String(genderCode).length,
       }, {
         page_id: 'edit_gender',
       });

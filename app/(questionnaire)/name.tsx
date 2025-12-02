@@ -39,10 +39,10 @@ export default function LoginName() {
     }
 
     // 问卷题目作答埋点
-    track('questionnaire_answer', {
+    track('question_answer', {
       question_id: 'q1_name',
-      question_type: 'text_input',
-      answer: name.trim(),
+      answer_type: 'text',
+      answer_value: name.trim(),
     }, {
       page_id: 'questionnaire_name',
     });
@@ -55,10 +55,7 @@ export default function LoginName() {
 
   // 问卷第一页曝光埋点
   useEffect(() => {
-    track('page_view_questionnaire', {
-      question_id: 'q1_name',
-      question_type: 'text_input',
-    }, {
+    track('page_view_questionnaire', {}, {
       page_id: 'questionnaire_name',
     });
   }, []);

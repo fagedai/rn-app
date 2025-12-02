@@ -89,11 +89,10 @@ export default function EditnestName() {
       setNestName(trimmedName); // 更新从API获取的名字，确保定制AI页面显示最新值
       
       // 机器人设定修改埋点
-      track('bot_settings_update', {
-        field: 'nest_name',
-        old_value: aiNestName,
-        new_value: trimmedName,
-        bot_id: userInfo.profileId || '',
+      track('bot_profile_edit', {
+        field_name: 'bot_name',
+        old_value_length: aiNestName ? aiNestName.length : 0,
+        new_value_length: trimmedName.length,
       }, {
         page_id: 'edit_nest_name',
       });

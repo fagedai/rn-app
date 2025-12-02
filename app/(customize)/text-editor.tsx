@@ -144,11 +144,10 @@ export default function TextEditor() {
         hasUnsavedChangesRef.current = false;
 
         // 机器人设定修改埋点
-        track('bot_settings_update', {
-          field: 'nest_backstory',
-          old_value: aiBackgroundStory,
-          new_value: text,
-          bot_id: userInfo.profileId || '',
+        track('bot_profile_edit', {
+          field_name: 'bot_persona',
+          old_value_length: aiBackgroundStory ? aiBackgroundStory.length : 0,
+          new_value_length: text.length,
         }, {
           page_id: 'text_editor',
         });

@@ -93,10 +93,10 @@ export default function EditUsername() {
       setName(trimmedUsername);
       
       // 用户信息修改埋点
-      track('user_info_update', {
-        field: 'name',
-        old_value: userInfo.name,
-        new_value: trimmedUsername,
+      track('user_profile_edit', {
+        field_name: 'user_name',
+        old_value_length: userInfo.name ? userInfo.name.length : 0,
+        new_value_length: trimmedUsername.length,
       }, {
         page_id: 'edit_username',
       });
